@@ -3,7 +3,7 @@ module.exports = {
     BOT_TOKEN: process.env.BOT_TOKEN || 'YOUR_BOT_TOKEN',
     CLIENT_ID: process.env.CLIENT_ID || 'YOUR_CLIENT_ID',
     GUILD_ID: process.env.GUILD_ID || 'YOUR_GUILD_ID',
-    EMBED_COLOR: '#0099ff', // Màu mặc định cho embeds
+    EMBED_COLOR: '0x0099ff', // Màu mặc định cho embeds
 
     LAVALINK_NODES: [
         {
