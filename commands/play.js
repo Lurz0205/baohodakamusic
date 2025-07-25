@@ -5,7 +5,7 @@ const { QueryType } = require('discord-player');
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('play')
-        .setDescription('Phát nhạc từ YouTube, Spotify, hoặc SoundCloud (qua link).')
+        .setDescription('Phát nhạc từ YouTube hoặc Spotify.') // Cập nhật mô tả để phản ánh ưu tiên tìm kiếm
         .addStringOption(option =>
             option.setName('query')
                 .setDescription('Tên bài hát hoặc liên kết (YouTube, Spotify, SoundCloud)')
@@ -23,9 +23,16 @@ module.exports = {
         try {
             const { track } = await player.play(channel, query, {
                 requestedBy: interaction.user,
-                // ĐÃ SỬA: Ưu tiên tìm kiếm trên YouTube, sau đó là Spotify.
-                // Nếu là link trực tiếp (YouTube, Spotify, SoundCloud), discord-player vẫn sẽ tự động nhận diện.
-                searchEngine: [QueryType.YouTube, QueryType.SpotifySearch],
+                // ĐÃ SỬA: Sử dụng QueryType.Auto và fallbackSearchEngine để ưu tiên tìm kiếm
+                searchEngine: QueryType.Auto,
+                fallbackSearchEngine: QueryType.YouTube, // Ưu tiên YouTube nếu QueryType.Auto không tìm thấy
+                // Nếu vẫn không tìm thấy từ YouTube, bạn có thể thử Spotify bằng cách thêm logic
+                // hoặc dựa vào cách DefaultExtractors xử lý.
+                // Để đảm bảo Spotify được ưu tiên sau YouTube khi tìm kiếm bằng tên,
+                // chúng ta sẽ cần một cách tiếp cận phức tạp hơn hoặc dựa vào DefaultExtractors
+                // đã được tải để xử lý Spotify link.
+                // Với QueryType.Auto, nó sẽ tự động nhận diện link.
+                // Nếu là tìm kiếm bằng text, nó sẽ ưu tiên YouTube do fallback.
                 metadata: { channel: interaction.channel }
             });
 
