@@ -2,7 +2,6 @@
 require('dotenv').config();
 const { Client, GatewayIntentBits, Collection } = require('discord.js');
 const { Player } = require('discord-player');
-const { registerExtractors } = require('@discord-player/extractor');
 const fs = require('fs');
 const path = require('path');
 const config = require('./config');
@@ -28,7 +27,8 @@ const player = new Player(client, {
 });
 
 // Đăng ký extractors (YouTube, Spotify, SoundCloud)
-registerExtractors(player);
+// Sử dụng player.extractors.loadDefault() để tải tất cả các extractors mặc định
+player.extractors.loadDefault();
 
 // Cấu hình các Lavalink node
 player.nodes.set(config.LAVALINK_NODES);
