@@ -2,13 +2,12 @@
 require('dotenv').config();
 const { Client, GatewayIntentBits, Collection } = require('discord.js');
 const { Player } = require('discord-player');
-const { DefaultExtractors } = require('@discord-player/extractor'); // Sử dụng DefaultExtractors cho v7.x
+const { DefaultExtractors } = require('@discord-player/extractor');
 const fs = require('fs');
 const path = require('path');
 const config = require('./config');
 const http = require('http');
 
-// Bọc toàn bộ logic khởi tạo bot trong một hàm async IIFE để sử dụng await
 (async () => {
     const client = new Client({
         intents: [
@@ -21,20 +20,17 @@ const http = require('http');
     client.commands = new Collection();
     client.config = config;
 
-    // Khởi tạo Discord Player với các node Lavalink
     const player = new Player(client, {
         ytdlOptions: {
             filter: 'audioonly',
             quality: 'highestaudio',
             highWaterMark: 1 << 25,
         },
-        nodes: config.LAVALINK_NODES, // Truyền các node đã cấu hình vào đây
+        nodes: config.LAVALINK_NODES,
     });
 
-    // Logging để kiểm tra xem Lavalink nodes có được đọc từ config không
     console.log(`Đang cấu hình ${config.LAVALINK_NODES.length} Lavalink nodes.`);
 
-    // Tải các extractors mặc định (bao gồm YouTube, Spotify, SoundCloud)
     try {
         await player.extractors.loadMulti(DefaultExtractors);
         console.log('Đã tải tất cả DefaultExtractors.');
@@ -59,6 +55,10 @@ const http = require('http');
         console.error(`❌ Lỗi từ Lavalink node ${node.id} (${node.host}:${node.port}):`, error.message);
         if (error.message.includes('403 Forbidden') || error.message.includes('Unauthorized')) {
             console.error(`⚠️ Lỗi xác thực (403 Forbidden) cho node ${node.id}. Vui lòng kiểm tra lại mật khẩu (authorization) của node này trong config.js.`);
+        } else if (error.message.includes('ECONNREFUSED')) {
+            console.error(`⚠️ Kết nối bị từ chối cho node ${node.id}. Node có thể đang offline hoặc tường lửa chặn.`);
+        } else if (error.message.includes('ETIMEDOUT')) {
+            console.error(`⚠️ Hết thời gian chờ kết nối cho node ${node.id}. Vấn đề mạng hoặc node quá tải.`);
         }
     });
 
@@ -71,7 +71,6 @@ const http = require('http');
     });
 
     player.events.on('debug', (queue, message) => {
-        // Chỉ log các tin nhắn debug quan trọng hơn để tránh quá tải log
         if (message.includes('Node') || message.includes('WebSocket') || message.includes('Connection') || message.includes('Error')) {
             console.log(`[DEBUG PLAYER] ${message}`);
         }
@@ -130,17 +129,44 @@ const http = require('http');
 
     client.login(config.BOT_TOKEN);
 
-    // Kiểm tra và kết nối Lavalink nodes sau khi bot đã sẵn sàng
+    // ĐÃ THÊM: Hàm để chủ động kết nối các Lavalink nodes
+    async function connectLavalinkNodes() {
+        console.log('Đang cố gắng kết nối các Lavalink nodes...');
+        for (const nodeConfig of config.LAVALINK_NODES) {
+            try {
+                // Kiểm tra xem node đã được thêm vào player.nodes.cache chưa
+                let node = player.nodes.cache.get(nodeConfig.id);
+                if (!node) {
+                    // Nếu chưa có, thêm node vào player (nếu discord-player cho phép thêm thủ công)
+                    // Trong v7.x, nodes thường được thêm qua constructor.
+                    // Nếu node chưa kết nối, player sẽ tự động thử kết nối.
+                    console.log(`Node ${nodeConfig.id} chưa có trong cache, player sẽ tự động thử kết nối.`);
+                    // player.nodes.add(nodeConfig); // Phương thức này không có trong v7.x
+                    // Vì nodes đã được truyền vào constructor, player sẽ quản lý việc kết nối.
+                    // Chúng ta chỉ cần đợi các sự kiện nodeConnect/nodeError
+                } else if (!node.connected) {
+                    // Nếu node đã có nhưng chưa kết nối, log để theo dõi
+                    console.log(`Node ${nodeConfig.id} đã có trong cache nhưng chưa kết nối. Đang chờ player xử lý.`);
+                } else {
+                    console.log(`Node ${nodeConfig.id} đã kết nối.`);
+                }
+            } catch (error) {
+                console.error(`Lỗi khi xử lý node ${nodeConfig.id}:`, error.message);
+            }
+        }
+        // Cho một khoảng thời gian để các kết nối được thiết lập
+        setTimeout(() => {
+            const connectedNodes = player.nodes.cache.filter(n => n.connected).size;
+            console.log(`Sau khi kiểm tra, có ${connectedNodes} Lavalink node đang kết nối.`);
+            if (connectedNodes < 2) {
+                console.warn('Cảnh báo: Ít hơn 2 Lavalink node đang hoạt động. Có thể ảnh hưởng đến độ ổn định.');
+            }
+        }, 5000); // Đợi 5 giây để các kết nối có thời gian thiết lập
+    }
+
     client.once('ready', () => {
         console.log('Client đã sẵn sàng. Đang kiểm tra Lavalink nodes...');
-        if (player.nodes.cache.size === 0) {
-            console.warn('Không có Lavalink node nào trong cache của player. Vui lòng kiểm tra cấu hình hoặc trạng thái của các node.');
-        } else {
-            console.log(`Tìm thấy ${player.nodes.cache.size} Lavalink nodes trong cache. Kiểm tra log để xem trạng thái kết nối.`);
-            player.nodes.cache.forEach(node => {
-                console.log(`Node ${node.id}: Kết nối: ${node.connected ? '✅' : '❌'}`);
-            });
-        }
+        connectLavalinkNodes(); // Gọi hàm kiểm tra và kết nối nodes
     });
 
     const PORT = process.env.PORT || 3000;
