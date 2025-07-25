@@ -1,0 +1,25 @@
+{
+  "name": "discord-music-bot",
+  "version": "1.0.0",
+  "description": "A Discord music bot with multi-source support and slash commands.",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "keywords": [
+    "discord",
+    "bot",
+    "music",
+    "discord.js",
+    "discord-player",
+    "lavalink"
+  ],
+  "author": "Your Name/Team Name",
+  "license": "ISC",
+  "dependencies": {
+    "@discord-player/extractor": "^7.1.0",
+    "discord-player": "^7.1.0",
+    "discord.js": "^14.21.0",
+    "dotenv": "^17.2.1"
+  }
+}
