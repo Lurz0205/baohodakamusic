@@ -28,8 +28,6 @@ const http = require('http');
             quality: 'highestaudio',
             highWaterMark: 1 << 25,
         },
-        // ĐÃ SỬA: Cấu hình nodes TRỰC TIẾP trong constructor.
-        // Đây là cách duy nhất và đúng đắn trong discord-player v7.
         nodes: config.LAVALINK_NODES,
     });
 
@@ -79,8 +77,9 @@ const http = require('http');
     });
 
 
+    // ĐÃ SỬA: Bỏ comment dòng này để bật debug log chi tiết từ discord-player
     player.events.on('debug', (queue, message) => {
-        console.log(`[DEBUG] ${message}`); // Bỏ comment để xem debug log chi tiết
+        console.log(`[DEBUG] ${message}`);
     });
 
     // Tải các lệnh Slash Commands
@@ -139,13 +138,10 @@ const http = require('http');
     // Kiểm tra và kết nối Lavalink nodes sau khi bot đã sẵn sàng
     client.once('ready', () => {
         console.log('Client đã sẵn sàng. Đang kiểm tra Lavalink nodes...');
-        // Sau khi client sẵn sàng, discord-player sẽ tự động cố gắng kết nối các node đã cấu hình.
-        // Không cần gọi player.nodes.connect() hoặc player.nodes.add() nữa.
         if (player.nodes.cache.size === 0) {
             console.warn('Không có Lavalink node nào trong cache của player. Vui lòng kiểm tra cấu hình hoặc trạng thái của các node.');
         } else {
             console.log(`Tìm thấy ${player.nodes.cache.size} Lavalink nodes trong cache. Kiểm tra log để xem trạng thái kết nối.`);
-            // Có thể in ra trạng thái từng node nếu muốn
             player.nodes.cache.forEach(node => {
                 console.log(`Node ${node.id}: Kết nối: ${node.connected ? '✅' : '❌'}`);
             });
