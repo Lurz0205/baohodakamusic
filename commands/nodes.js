@@ -11,11 +11,11 @@ module.exports = {
         let description = 'Trạng thái Lavalink Nodes:\n\n';
 
         // ĐÃ SỬA: Cách truy cập nodes trong discord-player v6.x
-        // player.nodes là một Map hoặc Collection, cần chuyển đổi sang mảng để dùng forEach
-        const lavalinkNodes = Array.from(player.nodes.values()); // Chuyển đổi Map/Collection sang Array
+        // player.nodes là NodeManager, và các node được lưu trong cache của nó
+        const lavalinkNodes = Array.from(player.nodes.cache.values()); // Chuyển đổi Collection sang Array
 
         if (lavalinkNodes.length === 0) {
-            description += 'Không có Lavalink node nào được cấu hình.';
+            description += 'Không có Lavalink node nào được cấu hình hoặc kết nối.';
         } else {
             description += '**Nodes đã cấu hình:**\n';
             lavalinkNodes.forEach((node, index) => {
