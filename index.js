@@ -2,7 +2,6 @@
 require('dotenv').config();
 const { Client, GatewayIntentBits, Collection } = require('discord.js');
 const { Player } = require('discord-player');
-// Import DefaultExtractors (chứa tất cả các extractors mặc định)
 const { DefaultExtractors } = require('@discord-player/extractor');
 const fs = require('fs');
 const path = require('path');
@@ -29,24 +28,13 @@ const http = require('http');
             quality: 'highestaudio',
             highWaterMark: 1 << 25,
         },
-        // nodes: config.LAVALINK_NODES, // Tạm thời bỏ qua việc truyền nodes vào constructor
+        // ĐÃ SỬA: Cấu hình nodes TRỰC TIẾP trong constructor.
+        // Đây là cách duy nhất và đúng đắn trong discord-player v7.
+        nodes: config.LAVALINK_NODES,
     });
 
-    // ĐÃ SỬA: Thêm các node một cách tường minh sau khi khởi tạo Player
-    // Điều này có thể giúp đảm bảo chúng được đăng ký và kết nối đúng cách
-    if (config.LAVALINK_NODES && config.LAVALINK_NODES.length > 0) {
-        console.log(`Đang cố gắng thêm ${config.LAVALINK_NODES.length} Lavalink nodes một cách tường minh.`);
-        config.LAVALINK_NODES.forEach(nodeConfig => {
-            try {
-                player.nodes.add(nodeConfig);
-                console.log(`Đã thêm node: ${nodeConfig.host}:${nodeConfig.port}`);
-            } catch (addError) {
-                console.error(`Lỗi khi thêm Lavalink node ${nodeConfig.host}:${nodeConfig.port}:`, addError);
-            }
-        });
-    } else {
-        console.warn('Không có Lavalink node nào được cấu hình trong config.js.');
-    }
+    // Logging để kiểm tra xem Lavalink nodes có được đọc từ config không
+    console.log(`Đang cấu hình ${config.LAVALINK_NODES.length} Lavalink nodes.`);
 
 
     // Đảm bảo extractors được tải đúng cách
@@ -84,6 +72,12 @@ const http = require('http');
     player.events.on('nodeConnect', (node) => {
         console.log(`✅ Lavalink node ${node.id} (${node.host}:${node.port}) đã kết nối thành công.`);
     });
+
+    // THÊM SỰ KIỆN NGẮT KẾT NỐI NODE
+    player.events.on('nodeDisconnect', (node, reason) => {
+        console.warn(`❌ Lavalink node ${node.id} (${node.host}:${node.port}) đã ngắt kết nối. Lý do: ${reason?.code || 'Không rõ'}`);
+    });
+
 
     player.events.on('debug', (queue, message) => {
         console.log(`[DEBUG] ${message}`); // Bỏ comment để xem debug log chi tiết
@@ -145,14 +139,16 @@ const http = require('http');
     // Kiểm tra và kết nối Lavalink nodes sau khi bot đã sẵn sàng
     client.once('ready', () => {
         console.log('Client đã sẵn sàng. Đang kiểm tra Lavalink nodes...');
+        // Sau khi client sẵn sàng, discord-player sẽ tự động cố gắng kết nối các node đã cấu hình.
+        // Không cần gọi player.nodes.connect() hoặc player.nodes.add() nữa.
         if (player.nodes.cache.size === 0) {
             console.warn('Không có Lavalink node nào trong cache của player. Vui lòng kiểm tra cấu hình hoặc trạng thái của các node.');
         } else {
-            console.log(`Tìm thấy ${player.nodes.cache.size} Lavalink nodes trong cache.`);
-            // discord-player sẽ tự động kết nối khi cần.
-            // Có thể gọi player.nodes.connect() ở đây nếu muốn ép buộc kết nối,
-            // nhưng nó không còn là một hàm trong Player.nodes nữa.
-            // Việc thêm nodes bằng player.nodes.add() đã kích hoạt quá trình kết nối.
+            console.log(`Tìm thấy ${player.nodes.cache.size} Lavalink nodes trong cache. Kiểm tra log để xem trạng thái kết nối.`);
+            // Có thể in ra trạng thái từng node nếu muốn
+            player.nodes.cache.forEach(node => {
+                console.log(`Node ${node.id}: Kết nối: ${node.connected ? '✅' : '❌'}`);
+            });
         }
     });
 
