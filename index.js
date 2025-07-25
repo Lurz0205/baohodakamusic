@@ -23,15 +23,16 @@ const player = new Player(client, {
         filter: 'audioonly',
         quality: 'highestaudio',
         highWaterMark: 1 << 25, // Tăng buffer để tránh giật lag
-    }
+    },
+    // Cấu hình các Lavalink node TRỰC TIẾP TẠI ĐÂY
+    nodes: config.LAVALINK_NODES,
 });
 
 // Đăng ký extractors (YouTube, Spotify, SoundCloud)
-// Sử dụng player.extractors.loadDefault() để tải tất cả các extractors mặc định
 player.extractors.loadDefault();
 
-// Cấu hình các Lavalink node
-player.nodes.set(config.LAVALINK_NODES);
+// BỎ DÒNG NÀY VÌ ĐÃ CẤU HÌNH TRONG CONSTRUCTOR CỦA PLAYER:
+// player.nodes.set(config.LAVALINK_NODES);
 
 // Xử lý các sự kiện của Discord Player
 fs.readdirSync(path.join(__dirname, 'events', 'discord-player')).forEach(file => {
