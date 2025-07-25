@@ -13,7 +13,7 @@ const http = require('http');
     const client = new Client({
         intents: [
             GatewayIntentBits.Guilds,
-            GatewayIntentBits.GuildVoiceVoiceStates, // Đã sửa: GuildVoiceStates
+            GatewayIntentBits.GuildVoiceStates, // ĐÃ SỬA: Lỗi chính tả đã được khắc phục
             GatewayIntentBits.MessageContent
         ]
     });
@@ -117,8 +117,6 @@ const http = require('http');
     });
 
     client.login(config.BOT_TOKEN);
-
-    // ĐÃ XÓA DÒNG NÀY: player.nodes.connect(); // Không cần gọi tường minh nữa
 
     const PORT = process.env.PORT || 3000;
     const server = http.createServer((req, res) => {
