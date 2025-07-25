@@ -1,5 +1,5 @@
 // commands/play.js
-const { SlashCommandBuilder } = require('discord.js');
+const { SlashCommandBuilder, InteractionResponseTypes } = require('discord.js'); // Thêm InteractionResponseTypes
 const { QueryType } = require('discord-player');
 
 module.exports = {
@@ -15,50 +15,64 @@ module.exports = {
         const channel = interaction.member.voice.channel;
 
         if (!channel) {
+            // Phản hồi ngay lập tức nếu không ở kênh thoại
             return interaction.reply({ content: 'Bạn phải ở trong một kênh thoại để phát nhạc!', ephemeral: true });
         }
 
-        // Defer ngay lập tức để tránh lỗi Unknown interaction
-        await interaction.deferReply();
+        // Defer ngay lập tức để tránh lỗi Unknown interaction do thời gian xử lý
+        // Sử dụng interaction.deferReply() để gửi một phản hồi tạm thời.
+        // Sau đó, chúng ta sẽ dùng interaction.editReply() để cập nhật tin nhắn.
+        // Bắt lỗi khi deferReply() thất bại (ví dụ: tương tác đã quá hạn)
+        try {
+            await interaction.deferReply();
+        } catch (deferError) {
+            console.error('Lỗi khi deferReply:', deferError);
+            // Nếu deferReply thất bại (thường là do Unknown interaction),
+            // chúng ta không thể làm gì thêm với tương tác này.
+            // Có thể log lỗi và thoát.
+            return; // Thoát khỏi hàm để tránh lỗi tiếp theo
+        }
 
         try {
             let searchResult;
-            // Kiểm tra xem truy vấn có phải là URL hợp lệ mà discord-player có thể xử lý không
-            // QueryType.Auto sẽ tự động nhận diện các URL từ YouTube, Spotify, SoundCloud, v.v.
-            // Nếu không phải URL, chúng ta sẽ ép buộc tìm kiếm trên YouTube.
-            if (query.startsWith('http://') || query.startsWith('https://')) {
+            const isUrl = query.startsWith('http://') || query.startsWith('https://');
+
+            if (isUrl) {
                 searchResult = await player.search(query, {
                     requestedBy: interaction.user,
-                    searchEngine: QueryType.Auto // Để xử lý các link
+                    searchEngine: QueryType.Auto
                 });
             } else {
-                // Nếu không phải URL, ưu tiên tìm kiếm trên YouTube
                 searchResult = await player.search(query, {
                     requestedBy: interaction.user,
-                    searchEngine: QueryType.YouTubeSearch // Ép buộc tìm kiếm YouTube
+                    searchEngine: QueryType.YouTubeSearch
                 });
 
-                // Nếu YouTube không tìm thấy hoặc kết quả không phù hợp, thử Spotify
                 if (!searchResult || searchResult.isEmpty()) {
                     searchResult = await player.search(query, {
                         requestedBy: interaction.user,
-                        searchEngine: QueryType.SpotifySearch // Thử Spotify nếu YouTube không có
+                        searchEngine: QueryType.SpotifySearch
                     });
                 }
             }
 
-
             if (!searchResult || searchResult.isEmpty()) {
-                return interaction.followUp({ content: 'Không tìm thấy kết quả phù hợp trên YouTube hoặc Spotify. Vui lòng thử lại với từ khóa khác hoặc một liên kết trực tiếp.' });
+                return interaction.editReply({ content: 'Không tìm thấy kết quả phù hợp trên YouTube hoặc Spotify. Vui lòng thử lại với từ khóa khác hoặc một liên kết trực tiếp.' });
             }
 
-            const { track } = await player.play(channel, searchResult.tracks[0], {
+            const trackToPlay = searchResult.tracks[0];
+
+            if (!isUrl && trackToPlay.source === 'soundcloud') {
+                return interaction.editReply({ content: 'Tìm thấy bài hát từ SoundCloud, nhưng bot chỉ phát SoundCloud qua liên kết trực tiếp khi tìm kiếm bằng tên. Vui lòng cung cấp liên kết SoundCloud nếu bạn muốn phát bài này.' });
+            }
+
+            const { track } = await player.play(channel, trackToPlay, {
                 requestedBy: interaction.user,
-                metadata: { channel: interaction.channel } // Đảm bảo kênh được truyền
+                metadata: { channel: interaction.channel }
             });
 
             if (track) {
-                return interaction.followUp({
+                return interaction.editReply({
                     embeds: [{
                         title: `🎶 Đã thêm vào hàng chờ: ${track.title}`,
                         description: `Thời lượng: ${track.duration}\nNguồn: ${track.source}`,
@@ -72,16 +86,12 @@ module.exports = {
                     }]
                 });
             } else {
-                return interaction.followUp({ content: 'Đã xảy ra lỗi khi thêm bài hát vào hàng chờ.' });
+                return interaction.editReply({ content: 'Đã xảy ra lỗi khi thêm bài hát vào hàng chờ.' });
             }
         } catch (e) {
             console.error(e);
-            // Đảm bảo chỉ gửi followUp nếu chưa được phản hồi
-            if (interaction.deferred || interaction.replied) {
-                await interaction.followUp({ content: `Đã xảy ra lỗi khi phát nhạc: ${e.message}`, ephemeral: true });
-            } else {
-                await interaction.reply({ content: `Đã xảy ra lỗi khi phát nhạc: ${e.message}`, ephemeral: true });
-            }
+            // Sử dụng editReply thay vì followUp/reply sau khi đã defer
+            await interaction.editReply({ content: `Đã xảy ra lỗi khi phát nhạc: ${e.message}`, ephemeral: true });
         }
     },
 };
