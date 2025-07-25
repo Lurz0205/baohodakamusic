@@ -21,7 +21,7 @@ module.exports = {
 
             if (!guildId) {
                 console.warn('GUILD_ID không được cấu hình. Đang cố gắng đăng ký lệnh GLOBAL. Việc này có thể mất nhiều thời gian để các lệnh xuất hiện.');
-                // Xóa tất cả lệnh GLOBAL hiện có trước khi đăng ký lại
+                // ĐÃ SỬA: Xóa tất cả lệnh GLOBAL hiện có TRƯỚC KHI đăng ký lại
                 await rest.put(Routes.applicationCommands(clientId), { body: [] });
                 console.log('Đã xóa tất cả lệnh GLOBAL cũ.');
 
@@ -32,7 +32,7 @@ module.exports = {
                 console.log(`Đã tải thành công ${data.length} lệnh Slash Commands GLOBAL.`);
             } else {
                 console.log(`Đang đăng ký lệnh cho máy chủ: ${guildId}`);
-                // Xóa tất cả lệnh GUILD hiện có trước khi đăng ký lại
+                // ĐÃ SỬA: Xóa tất cả lệnh GUILD hiện có TRƯỚC KHI đăng ký lại
                 await rest.put(Routes.applicationGuildCommands(clientId, guildId), { body: [] });
                 console.log(`Đã xóa tất cả lệnh cũ trong máy chủ ${guildId}.`);
 
