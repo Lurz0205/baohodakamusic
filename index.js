@@ -28,39 +28,43 @@ const http = require('http');
             quality: 'highestaudio',
             highWaterMark: 1 << 25,
         },
-        // ĐÃ SỬA: Truyền nodes TRỰC TIẾP vào constructor.
-        // Đây là cách duy nhất và đúng đắn trong discord-player v7.
+        // ĐÂY LÀ PHẦN QUAN TRỌNG NHẤT:
+        // Cấu hình các Lavalink nodes TRỰC TIẾP trong constructor của Player.
+        // discord-player sẽ tự động quản lý việc kết nối khi cần thiết.
         nodes: config.LAVALINK_NODES,
     });
 
-    // ĐÃ SỬA: Đặt listener debug ngay sau khi player được khởi tạo
+    // Đặt listener debug ngay sau khi player được khởi tạo
     player.events.on('debug', (queue, message) => {
         console.log(`[DEBUG] ${message}`);
     });
 
     // Logging để kiểm tra xem Lavalink nodes có được đọc từ config không
     console.log(`Đang cấu hình ${config.LAVALINK_NODES.length} Lavalink nodes.`);
-    // THÊM: Log trực tiếp đối tượng player.nodes để kiểm tra nội dung
+    // Log trực tiếp đối tượng player.nodes để kiểm tra nội dung
     console.log('Trạng thái player.nodes ngay sau khởi tạo:', player.nodes);
-    // Sau khi truyền vào constructor, player.nodes.cache sẽ tự động chứa các node
-    // nhưng chúng sẽ không được kết nối cho đến khi có yêu cầu phát nhạc đầu tiên.
+    // player.nodes.cache ban đầu sẽ rỗng, các node sẽ được thêm vào khi kết nối thành công lần đầu.
     console.log('Số lượng node trong player.nodes.cache (sau khởi tạo):', player.nodes.cache.size);
 
-    // ĐÃ XÓA: Loại bỏ vòng lặp player.nodes.create() vì nó gây ra lỗi NoGuildError
-    // if (config.LAVALINK_NODES && config.LAVALINK_NODES.length > 0) {
-    //     console.log(`Đang cố gắng tạo ${config.LAVALINK_NODES.length} Lavalink nodes.`);
-    //     config.LAVALINK_NODES.forEach(nodeConfig => {
-    //         try {
-    //             const node = player.nodes.create(nodeConfig);
-    //             console.log(`Đã tạo node: ${node.id} (${node.host}:${node.port})`);
-    //         } catch (createError) {
-    //             console.error(`Lỗi khi tạo Lavalink node ${nodeConfig.host}:${nodeConfig.port}:`, createError);
-    //         }
-    //     });
-    // } else {
-    //     console.warn('Không có Lavalink node nào được cấu hình trong config.js.');
-    // }
-    // console.log('Số lượng node trong player.nodes.cache (sau khi tạo):', player.nodes.cache.size);
+    // PHẦN NÀY ĐÃ BỊ XÓA HOÀN TOÀN:
+    // KHÔNG SỬ DỤNG player.nodes.create() Ở ĐÂY!
+    // Vòng lặp này đã gây ra lỗi "NoGuildError".
+    /*
+    if (config.LAVALINK_NODES && config.LAVALINK_NODES.length > 0) {
+        console.log(`Đang cố gắng tạo ${config.LAVALINK_NODES.length} Lavalink nodes.`);
+        config.LAVALINK_NODES.forEach(nodeConfig => {
+            try {
+                const node = player.nodes.create(nodeConfig);
+                console.log(`Đã tạo node: ${node.id} (${node.host}:${node.port})`);
+            } catch (createError) {
+                console.error(`Lỗi khi tạo Lavalink node ${nodeConfig.host}:${nodeConfig.port}:`, createError);
+            }
+        });
+    } else {
+        console.warn('Không có Lavalink node nào được cấu hình trong config.js.');
+    }
+    console.log('Số lượng node trong player.nodes.cache (sau khi tạo):', player.nodes.cache.size);
+    */
 
 
     // Đảm bảo extractors được tải đúng cách
@@ -83,7 +87,7 @@ const http = require('http');
         }
     });
 
-    // THÊM CÁC SỰ KIỆN LỖI LAVALINK NÀY
+    // Các sự kiện Lavalink
     player.events.on('nodeError', (node, error) => {
         console.error(`Lỗi từ Lavalink node ${node.id}:`, error);
     });
@@ -157,6 +161,8 @@ const http = require('http');
     // Kiểm tra và kết nối Lavalink nodes sau khi bot đã sẵn sàng
     client.once('ready', () => {
         console.log('Client đã sẵn sàng. Đang kiểm tra Lavalink nodes...');
+        // Sau khi client sẵn sàng, discord-player sẽ tự động cố gắng kết nối các node đã cấu hình.
+        // Không cần gọi player.nodes.connect() hoặc player.nodes.add()/create() nữa.
         if (player.nodes.cache.size === 0) {
             console.warn('Không có Lavalink node nào trong cache của player. Vui lòng kiểm tra cấu hình hoặc trạng thái của các node.');
         } else {
