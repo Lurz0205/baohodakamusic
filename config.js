@@ -78,5 +78,5 @@ module.exports = {
     // Các tùy chọn khác
     DEFAULT_VOLUME: 80,
     MAX_QUEUE_SIZE: 200,
-    EMBED_COLOR: '#0099ff',
+    EMBED_COLOR: 0x0099ff, // Đã sửa: Chuyển từ chuỗi hex sang số nguyên
 };
