@@ -32,8 +32,13 @@ const http = require('http');
         nodes: config.LAVALINK_NODES,
     });
 
-    // ĐÃ SỬA: Chỉ tải các extractors cho YouTube và Spotify
-    await player.extractors.loadMulti([YouTubeExtractor, SpotifyExtractor]);
+    // ĐÃ SỬA: Đăng ký từng extractor một cách riêng lẻ
+    player.extractors.register(YouTubeExtractor);
+    player.extractors.register(SpotifyExtractor);
+    // Nếu sau này bạn muốn thêm SoundCloud, bạn sẽ thêm dòng này:
+    // const { SoundCloudExtractor } = require('@discord-player/extractor');
+    // player.extractors.register(SoundCloudExtractor);
+
 
     // Xử lý các sự kiện của Discord Player
     fs.readdirSync(path.join(__dirname, 'events', 'discord-player')).forEach(file => {
