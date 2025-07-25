@@ -133,13 +133,35 @@ const http = require('http');
 
     client.login(config.BOT_TOKEN);
 
-    // Kiểm tra Lavalink nodes sau khi bot đã sẵn sàng
+    // Kiểm tra và BUỘC kết nối Lavalink nodes sau khi bot đã sẵn sàng
     client.once('ready', () => {
         console.log('Client đã sẵn sàng. Đang kiểm tra Lavalink nodes...');
-        // ĐÃ SỬA: Kiểm tra trực tiếp player.nodes.cache
-        // player.nodes là GuildNodeManager, nó có thuộc tính .cache
+        // ĐÃ THÊM: Buộc kết nối đến các Lavalink nodes
+        if (player.nodes.manager && player.nodes.manager.nodes.size > 0) { // Đảm bảo manager tồn tại
+            console.log('Đang cố gắng kết nối các Lavalink nodes đã cấu hình...');
+            player.nodes.manager.nodes.forEach(node => {
+                if (!node.connected) {
+                    // Gọi connect() trên từng node nếu nó chưa kết nối
+                    // Lưu ý: Trong một số phiên bản discord-player,
+                    // việc gọi node.connect() trực tiếp có thể không cần thiết
+                    // hoặc không phải là cách được khuyến nghị.
+                    // Nhưng chúng ta sẽ thử để tạo ra log debug.
+                    try {
+                        node.connect();
+                        console.log(`Đã gửi yêu cầu kết nối cho node ${node.id}`);
+                    } catch (connectError) {
+                        console.error(`Lỗi khi cố gắng kết nối node ${node.id}:`, connectError);
+                    }
+                }
+            });
+        } else {
+            console.warn('Không có Lavalink node nào được cấu hình trong player.nodes.manager.nodes. Vui lòng kiểm tra config.js.');
+        }
+
+
+        // Log trạng thái cache sau khi cố gắng kết nối
         if (player.nodes.cache.size === 0) {
-            console.warn('Không có Lavalink node nào đang kết nối trong cache của player. Vui lòng kiểm tra cấu hình hoặc trạng thái của các node.');
+            console.warn('Sau khi cố gắng kết nối, không có Lavalink node nào đang kết nối trong cache của player.');
         } else {
             console.log(`Tìm thấy ${player.nodes.cache.size} Lavalink nodes đang kết nối trong cache.`);
             player.nodes.cache.forEach(node => {
