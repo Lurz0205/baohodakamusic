@@ -7,12 +7,14 @@ module.exports = {
 
     LAVALINK_NODES: [
         {
-            id: 'AjieDev-V3', // Sử dụng identifier làm ID
+            id: 'AjieDev-V3',
             host: 'lava-v3.ajieblogs.eu.org',
             port: 443,
-            authorization: 'https://dsc.gg/ajidevserver', // Mật khẩu thực tế
+            authorization: 'https://dsc.gg/ajidevserver', // Mật khẩu là link Discord
             secure: true
-        },
+        }
+        // TẠM THỜI BỎ QUA CÁC NODE KHÁC ĐỂ DEBUG
+        /*
         {
             id: 'Serenetia-V3',
             host: 'lavalinkv3-id.serenetia.com',
@@ -52,7 +54,7 @@ module.exports = {
             id: 'RY4N',
             host: '89.251.21.22',
             port: 25691,
-            authorization: 'youshallnotpass', // Mật khẩu này có vẻ là "youshallnotpass" thực tế
+            authorization: 'youshallnotpass',
             secure: false
         },
         {
@@ -76,5 +78,6 @@ module.exports = {
             authorization: 'https://dsc.gg/ajidevserver',
             secure: false
         }
+        */
     ]
 };
