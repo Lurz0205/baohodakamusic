@@ -12,7 +12,7 @@ const http = require('http');
     const client = new Client({
         intents: [
             GatewayIntentBits.Guilds,
-            GatewayIntentBits.GuildVoiceStates, // Đảm bảo đúng chính tả
+            GatewayIntentBits.GuildVoiceStates,
             GatewayIntentBits.MessageContent
         ]
     });
@@ -28,7 +28,11 @@ const http = require('http');
             highWaterMark: 1 << 25,
         },
         nodes: config.LAVALINK_NODES,
-        // ĐÃ XÓA DÒNG GÂY LỖI 'use'
+    });
+
+    // ĐÃ THÊM: Listener cho sự kiện 'debug' để có thêm thông tin chi tiết
+    player.on('debug', (message) => {
+        console.log(`[DEBUG PLAYER] ${message}`);
     });
 
     // Xử lý các sự kiện của Discord Player (v6.x)
