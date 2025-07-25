@@ -1,7 +1,8 @@
 // index.js
 require('dotenv').config();
 const { Client, GatewayIntentBits, Collection } = require('discord.js');
-const { Player } = require('discord-player'); // discord-player v6.x
+const { Player } = require('discord-player');
+const { DefaultExtractors } = require('@discord-player/extractor'); // Sử dụng DefaultExtractors cho v7.x
 const fs = require('fs');
 const path = require('path');
 const config = require('./config');
@@ -20,76 +21,60 @@ const http = require('http');
     client.commands = new Collection();
     client.config = config;
 
-    // Khởi tạo Discord Player cho v6.x
+    // Khởi tạo Discord Player với các node Lavalink
     const player = new Player(client, {
         ytdlOptions: {
             filter: 'audioonly',
             quality: 'highestaudio',
             highWaterMark: 1 << 25,
         },
-        nodes: config.LAVALINK_NODES, // Truyền các node đã cấu hình
-        autoRegisterExtractor: false, // Tắt tự động đăng ký extractor để kiểm soát thủ công
+        nodes: config.LAVALINK_NODES, // Truyền các node đã cấu hình vào đây
     });
 
-    // Các sự kiện của Discord Player (v6.x)
-    player.on('error', (queue, error) => {
-        console.error(`[PLAYER ERROR] Lỗi từ queue ${queue.guild.name}: ${error.message}`);
-        if (queue.metadata && queue.metadata.channel) {
-            queue.metadata.channel.send(`Đã xảy ra lỗi khi phát nhạc: ${error.message}`).catch(e => console.error("Lỗi khi gửi tin nhắn lỗi:", e));
+    // Logging để kiểm tra xem Lavalink nodes có được đọc từ config không
+    console.log(`Đang cấu hình ${config.LAVALINK_NODES.length} Lavalink nodes.`);
+
+    // Tải các extractors mặc định (bao gồm YouTube, Spotify, SoundCloud)
+    try {
+        await player.extractors.loadMulti(DefaultExtractors);
+        console.log('Đã tải tất cả DefaultExtractors.');
+    } catch (e) {
+        console.error('Lỗi khi tải extractors:', e);
+    }
+
+    // Xử lý các sự kiện của Discord Player
+    fs.readdirSync(path.join(__dirname, 'events', 'discord-player')).forEach(file => {
+        const event = require(path.join(__dirname, 'events', 'discord-player', file));
+        if (event.name) {
+            player.events.on(event.name, (...args) => event.execute(...args));
         }
     });
 
-    player.on('debug', (message) => {
+    // Các sự kiện Lavalink Node (quan trọng để debug kết nối)
+    player.events.on('nodeConnect', (node) => {
+        console.log(`✅ Lavalink node ${node.id} (${node.host}:${node.port}) đã kết nối thành công.`);
+    });
+
+    player.events.on('nodeError', (node, error) => {
+        console.error(`❌ Lỗi từ Lavalink node ${node.id} (${node.host}:${node.port}):`, error.message);
+        if (error.message.includes('403 Forbidden') || error.message.includes('Unauthorized')) {
+            console.error(`⚠️ Lỗi xác thực (403 Forbidden) cho node ${node.id}. Vui lòng kiểm tra lại mật khẩu (authorization) của node này trong config.js.`);
+        }
+    });
+
+    player.events.on('nodeDisconnect', (node, reason) => {
+        console.warn(`⚠️ Lavalink node ${node.id} (${node.host}:${node.port}) đã ngắt kết nối. Lý do: ${reason?.code || 'Không rõ'}`);
+    });
+
+    player.events.on('nodesDestroy', (queue) => {
+        console.warn(`Tất cả Lavalink node đã bị hủy hoặc ngắt kết nối. Hàng chờ trong guild ${queue.guild.name} sẽ bị xóa.`);
+    });
+
+    player.events.on('debug', (queue, message) => {
         // Chỉ log các tin nhắn debug quan trọng hơn để tránh quá tải log
-        if (message.includes('Node') || message.includes('WebSocket') || message.includes('Connection')) {
+        if (message.includes('Node') || message.includes('WebSocket') || message.includes('Connection') || message.includes('Error')) {
             console.log(`[DEBUG PLAYER] ${message}`);
         }
-    });
-
-    player.on('nodeConnect', (node) => {
-        console.log(`✅ Lavalink node ${node.host}:${node.port} đã kết nối thành công.`);
-    });
-
-    player.on('nodeError', (node, error) => {
-        console.error(`❌ Lỗi từ Lavalink node ${node.host}:${node.port}:`, error.message);
-        if (error.message.includes('403 Forbidden') || error.message.includes('Unauthorized')) {
-            console.error(`⚠️ Lỗi xác thực (403 Forbidden) cho node ${node.host}. Vui lòng kiểm tra lại mật khẩu (password) của node này trong config.js.`);
-        }
-    });
-
-    player.on('nodeDisconnect', (node, reason) => {
-        console.warn(`⚠️ Lavalink node ${node.host}:${node.port} đã ngắt kết nối. Lý do: ${reason?.code || 'Không rõ'}`);
-    });
-
-    player.on('trackStart', (queue, track) => {
-        console.log(`🎶 Đang phát: ${track.title} trên guild ${queue.guild.id}`);
-        if (queue.metadata && queue.metadata.channel) {
-            queue.metadata.channel.send({
-                embeds: [{
-                    title: `▶️ Bắt đầu phát: ${track.title}`,
-                    description: `Thời lượng: ${track.duration}\nKênh: ${track.author}\nNguồn: ${track.source}`,
-                    url: track.url,
-                    thumbnail: { url: track.thumbnail },
-                    color: client.config.EMBED_COLOR,
-                    footer: {
-                        text: `Yêu cầu bởi: ${track.requestedBy.tag}`,
-                        icon_url: track.requestedBy.displayAvatarURL({ dynamic: true })
-                    }
-                }]
-            }).catch(console.error);
-        } else {
-            console.warn('Không tìm thấy kênh để gửi thông báo trackStart. Metadata hoặc channel bị thiếu.');
-        }
-    });
-
-    player.on('queueEnd', (queue) => {
-        console.log(`Hàng chờ kết thúc trên guild ${queue.guild.id}`);
-        if (queue.metadata && queue.metadata.channel) {
-            queue.metadata.channel.send('Hàng chờ đã kết thúc. Rời kênh thoại.').catch(console.error);
-        } else {
-            console.warn('Không tìm thấy kênh để gửi thông báo queueEnd. Metadata hoặc channel bị thiếu.');
-        }
-        queue.destroy(); // Hủy queue và rời kênh thoại
     });
 
     // Tải các lệnh Slash Commands
@@ -144,6 +129,19 @@ const http = require('http');
     });
 
     client.login(config.BOT_TOKEN);
+
+    // Kiểm tra và kết nối Lavalink nodes sau khi bot đã sẵn sàng
+    client.once('ready', () => {
+        console.log('Client đã sẵn sàng. Đang kiểm tra Lavalink nodes...');
+        if (player.nodes.cache.size === 0) {
+            console.warn('Không có Lavalink node nào trong cache của player. Vui lòng kiểm tra cấu hình hoặc trạng thái của các node.');
+        } else {
+            console.log(`Tìm thấy ${player.nodes.cache.size} Lavalink nodes trong cache. Kiểm tra log để xem trạng thái kết nối.`);
+            player.nodes.cache.forEach(node => {
+                console.log(`Node ${node.id}: Kết nối: ${node.connected ? '✅' : '❌'}`);
+            });
+        }
+    });
 
     const PORT = process.env.PORT || 3000;
     const server = http.createServer((req, res) => {
