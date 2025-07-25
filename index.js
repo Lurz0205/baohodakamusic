@@ -1,9 +1,7 @@
 // index.js
 require('dotenv').config();
 const { Client, GatewayIntentBits, Collection } = require('discord.js');
-const { Player } = require('discord-player');
-// Import DefaultExtractors (chứa tất cả các extractors mặc định)
-const { DefaultExtractors } = require('@discord-player/extractor');
+const { Player } = require('discord-player'); // discord-player v6.x
 const fs = require('fs');
 const path = require('path');
 const config = require('./config');
@@ -22,33 +20,62 @@ const http = require('http');
     client.commands = new Collection();
     client.config = config;
 
-    // Khởi tạo Discord Player
+    // Khởi tạo Discord Player cho v6.x
     const player = new Player(client, {
         ytdlOptions: {
             filter: 'audioonly',
             quality: 'highestaudio',
             highWaterMark: 1 << 25,
         },
+        // Trong v6.x, nodes thường được truyền trực tiếp vào constructor
+        // hoặc thêm sau bằng player.nodes.add()
         nodes: config.LAVALINK_NODES,
+        use  // This option is deprecated in v7 but might be relevant for v6.x
     });
 
-    // ĐÃ SỬA: Lọc DefaultExtractors để chỉ tải YouTube và Spotify
-    const filteredExtractors = DefaultExtractors.filter(
-        (extractor) =>
-            extractor.identifier === 'YouTubeExtractor' ||
-            extractor.identifier === 'SpotifyExtractor'
-            // Có thể thêm các extractor khác nếu muốn, ví dụ: 'AppleMusicExtractor'
-    );
+    // Xử lý các sự kiện của Discord Player (v6.x)
+    // Các sự kiện có thể có tên khác trong v6.x
+    player.on('error', (queue, error) => {
+        console.error(`Lỗi từ queue: ${error.message}`);
+    });
 
-    await player.extractors.loadMulti(filteredExtractors);
+    player.on('nodeConnect', (node) => {
+        console.log(`✅ Lavalink node ${node.host}:${node.port} đã kết nối thành công.`);
+    });
 
-
-    // Xử lý các sự kiện của Discord Player
-    fs.readdirSync(path.join(__dirname, 'events', 'discord-player')).forEach(file => {
-        const event = require(path.join(__dirname, 'events', 'discord-player', file));
-        if (event.name) {
-            player.events.on(event.name, (...args) => event.execute(...args));
+    player.on('nodeError', (node, error) => {
+        console.error(`❌ Lỗi từ Lavalink node ${node.host}:${node.port}:`, error.message);
+        if (error.message.includes('403 Forbidden') || error.message.includes('Unauthorized')) {
+            console.error(`⚠️ Lỗi xác thực (403 Forbidden) cho node ${node.host}. Vui lòng kiểm tra lại mật khẩu (password) của node này trong config.js.`);
         }
+    });
+
+    player.on('nodeDisconnect', (node, reason) => {
+        console.warn(`⚠️ Lavalink node ${node.host}:${node.port} đã ngắt kết nối. Lý do: ${reason?.code || 'Không rõ'}`);
+    });
+
+    player.on('trackStart', (queue, track) => {
+        console.log(`🎶 Đang phát: ${track.title} trên guild ${queue.guild.id}`);
+        // Gửi tin nhắn thông báo bài hát đang phát
+        queue.metadata.channel.send({
+            embeds: [{
+                title: `▶️ Bắt đầu phát: ${track.title}`,
+                description: `Thời lượng: ${track.duration}\nKênh: ${track.author}\nNguồn: ${track.source}`,
+                url: track.url,
+                thumbnail: { url: track.thumbnail },
+                color: client.config.EMBED_COLOR,
+                footer: {
+                    text: `Yêu cầu bởi: ${track.requestedBy.tag}`,
+                    icon_url: track.requestedBy.displayAvatarURL({ dynamic: true })
+                }
+            }]
+        }).catch(console.error);
+    });
+
+    player.on('queueEnd', (queue) => {
+        console.log(`Hàng chờ kết thúc trên guild ${queue.guild.id}`);
+        queue.metadata.channel.send('Hàng chờ đã kết thúc. Rời kênh thoại.').catch(console.error);
+        queue.destroy(); // Hủy queue và rời kênh thoại
     });
 
     // Tải các lệnh Slash Commands
