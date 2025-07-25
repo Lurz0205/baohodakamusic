@@ -2,8 +2,8 @@
 require('dotenv').config();
 const { Client, GatewayIntentBits, Collection } = require('discord.js');
 const { Player } = require('discord-player');
-// Thay vì DefaultExtractors, chúng ta sẽ import các extractors cụ thể
-const { YouTubeExtractor, SpotifyExtractor } = require('@discord-player/extractor'); // Thêm import này
+// Import các lớp extractor
+const { YouTubeExtractor, SpotifyExtractor } = require('@discord-player/extractor');
 const fs = require('fs');
 const path = require('path');
 const config = require('./config');
@@ -32,12 +32,14 @@ const http = require('http');
         nodes: config.LAVALINK_NODES,
     });
 
-    // ĐÃ SỬA: Đăng ký từng extractor một cách riêng lẻ
-    player.extractors.register(YouTubeExtractor);
-    player.extractors.register(SpotifyExtractor);
+    // ĐÃ SỬA: Khởi tạo các extractor trước khi đăng ký
+    // Đăng ký YouTube Extractor
+    player.extractors.register(new YouTubeExtractor());
+    // Đăng ký Spotify Extractor
+    player.extractors.register(new SpotifyExtractor());
     // Nếu sau này bạn muốn thêm SoundCloud, bạn sẽ thêm dòng này:
     // const { SoundCloudExtractor } = require('@discord-player/extractor');
-    // player.extractors.register(SoundCloudExtractor);
+    // player.extractors.register(new SoundCloudExtractor());
 
 
     // Xử lý các sự kiện của Discord Player
