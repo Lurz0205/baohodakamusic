@@ -6,7 +6,7 @@ const { DefaultExtractors } = require('@discord-player/extractor');
 const fs = require('fs');
 const path = require('path');
 const config = require('./config');
-const http = require = require('http');
+const http = require('http'); // ĐÃ SỬA: Chỉ cần require('http') một cách bình thường
 
 // Bọc toàn bộ logic khởi tạo bot trong một hàm async IIFE để sử dụng await
 (async () => {
