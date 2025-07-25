@@ -23,8 +23,9 @@ module.exports = {
         try {
             const { track } = await player.play(channel, query, {
                 requestedBy: interaction.user,
-                searchEngine: QueryType.Auto,
-                // THÊM DÒNG NÀY: Lưu kênh văn bản để gửi thông báo
+                // ĐÃ SỬA: Ưu tiên tìm kiếm trên YouTube, sau đó là Spotify.
+                // Nếu là link trực tiếp (YouTube, Spotify, SoundCloud), discord-player vẫn sẽ tự động nhận diện.
+                searchEngine: [QueryType.YouTube, QueryType.SpotifySearch],
                 metadata: { channel: interaction.channel }
             });
 
