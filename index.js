@@ -29,18 +29,30 @@ const http = require('http');
             quality: 'highestaudio',
             highWaterMark: 1 << 25,
         },
-        nodes: config.LAVALINK_NODES, // Đảm bảo các node được truyền vào đây
+        // nodes: config.LAVALINK_NODES, // Tạm thời bỏ qua việc truyền nodes vào constructor
     });
 
-    // Logging để kiểm tra xem Lavalink nodes có được đọc từ config không
-    console.log(`Đang cấu hình ${config.LAVALINK_NODES.length} Lavalink nodes.`);
+    // ĐÃ SỬA: Thêm các node một cách tường minh sau khi khởi tạo Player
+    // Điều này có thể giúp đảm bảo chúng được đăng ký và kết nối đúng cách
+    if (config.LAVALINK_NODES && config.LAVALINK_NODES.length > 0) {
+        console.log(`Đang cố gắng thêm ${config.LAVALINK_NODES.length} Lavalink nodes một cách tường minh.`);
+        config.LAVALINK_NODES.forEach(nodeConfig => {
+            try {
+                player.nodes.add(nodeConfig);
+                console.log(`Đã thêm node: ${nodeConfig.host}:${nodeConfig.port}`);
+            } catch (addError) {
+                console.error(`Lỗi khi thêm Lavalink node ${nodeConfig.host}:${nodeConfig.port}:`, addError);
+            }
+        });
+    } else {
+        console.warn('Không có Lavalink node nào được cấu hình trong config.js.');
+    }
 
-    // ĐÃ SỬA: Đảm bảo extractors được tải đúng cách
-    // Phương pháp đáng tin cậy nhất là loadMulti với DefaultExtractors
-    // và sau đó có thể gỡ bỏ các extractors không mong muốn nếu cần.
+
+    // Đảm bảo extractors được tải đúng cách
     try {
         await player.extractors.loadMulti(DefaultExtractors);
-        // Sau khi tải tất cả, nếu bạn muốn loại bỏ SoundCloud, bạn có thể làm như sau:
+        // Nếu bạn muốn loại bỏ SoundCloud, bạn có thể bỏ comment dòng này:
         // player.extractors.unregister('SoundCloudExtractor');
         // console.log('Đã gỡ đăng ký SoundCloudExtractor.');
         console.log('Đã tải tất cả DefaultExtractors.');
@@ -66,6 +78,11 @@ const http = require('http');
     player.events.on('nodesDestroy', (queue) => {
         console.warn(`Tất cả Lavalink node đã bị hủy hoặc ngắt kết nối. Hàng chờ trong guild ${queue.guild.name} sẽ bị xóa.`);
         // Có thể thông báo cho người dùng hoặc thực hiện các hành động khôi phục
+    });
+
+    // THÊM SỰ KIỆN KẾT NỐI NODE THÀNH CÔNG
+    player.events.on('nodeConnect', (node) => {
+        console.log(`✅ Lavalink node ${node.id} (${node.host}:${node.port}) đã kết nối thành công.`);
     });
 
     player.events.on('debug', (queue, message) => {
@@ -129,13 +146,13 @@ const http = require('http');
     client.once('ready', () => {
         console.log('Client đã sẵn sàng. Đang kiểm tra Lavalink nodes...');
         if (player.nodes.cache.size === 0) {
-            console.warn('Không có Lavalink node nào trong cache của player. Vui lòng kiểm tra cấu hình.');
+            console.warn('Không có Lavalink node nào trong cache của player. Vui lòng kiểm tra cấu hình hoặc trạng thái của các node.');
         } else {
             console.log(`Tìm thấy ${player.nodes.cache.size} Lavalink nodes trong cache.`);
             // discord-player sẽ tự động kết nối khi cần.
-            // Nếu bạn muốn kết nối ngay lập tức, bạn có thể gọi player.nodes.connect()
+            // Có thể gọi player.nodes.connect() ở đây nếu muốn ép buộc kết nối,
             // nhưng nó không còn là một hàm trong Player.nodes nữa.
-            // Việc truyền nodes vào constructor là đủ.
+            // Việc thêm nodes bằng player.nodes.add() đã kích hoạt quá trình kết nối.
         }
     });
 
