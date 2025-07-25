@@ -28,10 +28,7 @@ const http = require('http');
             quality: 'highestaudio',
             highWaterMark: 1 << 25,
         },
-        // ĐÂY LÀ PHẦN QUAN TRỌNG NHẤT:
-        // Cấu hình các Lavalink nodes TRỰC TIẾP trong constructor của Player.
-        // discord-player sẽ tự động quản lý việc kết nối khi cần thiết.
-        nodes: config.LAVALINK_NODES,
+        nodes: config.LAVALINK_NODES, // Cấu hình nodes TRỰC TIẾP trong constructor
     });
 
     // Đặt listener debug ngay sau khi player được khởi tạo
@@ -41,41 +38,19 @@ const http = require('http');
 
     // Logging để kiểm tra xem Lavalink nodes có được đọc từ config không
     console.log(`Đang cấu hình ${config.LAVALINK_NODES.length} Lavalink nodes.`);
-    // Log trực tiếp đối tượng player.nodes để kiểm tra nội dung
     console.log('Trạng thái player.nodes ngay sau khởi tạo:', player.nodes);
-    // player.nodes.cache ban đầu sẽ rỗng, các node sẽ được thêm vào khi kết nối thành công lần đầu.
     console.log('Số lượng node trong player.nodes.cache (sau khởi tạo):', player.nodes.cache.size);
-
-    // PHẦN NÀY ĐÃ BỊ XÓA HOÀN TOÀN:
-    // KHÔNG SỬ DỤNG player.nodes.create() Ở ĐÂY!
-    // Vòng lặp này đã gây ra lỗi "NoGuildError".
-    /*
-    if (config.LAVALINK_NODES && config.LAVALINK_NODES.length > 0) {
-        console.log(`Đang cố gắng tạo ${config.LAVALINK_NODES.length} Lavalink nodes.`);
-        config.LAVALINK_NODES.forEach(nodeConfig => {
-            try {
-                const node = player.nodes.create(nodeConfig);
-                console.log(`Đã tạo node: ${node.id} (${node.host}:${node.port})`);
-            } catch (createError) {
-                console.error(`Lỗi khi tạo Lavalink node ${nodeConfig.host}:${nodeConfig.port}:`, createError);
-            }
-        });
-    } else {
-        console.warn('Không có Lavalink node nào được cấu hình trong config.js.');
-    }
-    console.log('Số lượng node trong player.nodes.cache (sau khi tạo):', player.nodes.cache.size);
-    */
 
 
     // Đảm bảo extractors được tải đúng cách
     try {
         await player.extractors.loadMulti(DefaultExtractors);
-        // Nếu bạn muốn loại bỏ SoundCloud, bạn có thể bỏ comment dòng này:
-        // player.extractors.unregister('SoundCloudExtractor');
-        // console.log('Đã gỡ đăng ký SoundCloudExtractor.');
-        console.log('Đã tải tất cả DefaultExtractors.');
+        // ĐÃ SỬA: Gỡ đăng ký SoundCloudExtractor một cách rõ ràng
+        player.extractors.unregister('SoundCloudExtractor');
+        console.log('Đã gỡ đăng ký SoundCloudExtractor.');
+        console.log('Đã tải và lọc DefaultExtractors.');
     } catch (e) {
-        console.error('Lỗi khi tải extractors:', e);
+        console.error('Lỗi khi tải hoặc gỡ đăng ký extractors:', e);
     }
 
 
@@ -161,14 +136,13 @@ const http = require('http');
     // Kiểm tra và kết nối Lavalink nodes sau khi bot đã sẵn sàng
     client.once('ready', () => {
         console.log('Client đã sẵn sàng. Đang kiểm tra Lavalink nodes...');
-        // Sau khi client sẵn sàng, discord-player sẽ tự động cố gắng kết nối các node đã cấu hình.
-        // Không cần gọi player.nodes.connect() hoặc player.nodes.add()/create() nữa.
-        if (player.nodes.cache.size === 0) {
-            console.warn('Không có Lavalink node nào trong cache của player. Vui lòng kiểm tra cấu hình hoặc trạng thái của các node.');
+        // player.nodes.manager.nodes sẽ chứa tất cả các node đã cấu hình
+        if (player.nodes.manager.nodes.size === 0) { // ĐÃ SỬA: Kiểm tra player.nodes.manager.nodes
+            console.warn('Không có Lavalink node nào được cấu hình trong player.nodes.manager.nodes. Vui lòng kiểm tra config.js.');
         } else {
-            console.log(`Tìm thấy ${player.nodes.cache.size} Lavalink nodes trong cache. Kiểm tra log để xem trạng thái kết nối.`);
-            player.nodes.cache.forEach(node => {
-                console.log(`Node ${node.id}: Kết nối: ${node.connected ? '✅' : '❌'}`);
+            console.log(`Tìm thấy ${player.nodes.manager.nodes.size} Lavalink nodes đã cấu hình. Kiểm tra log để xem trạng thái kết nối.`);
+            player.nodes.manager.nodes.forEach(node => { // ĐÃ SỬA: Lặp qua player.nodes.manager.nodes
+                console.log(`Node ${node.id}: Host: ${node.host}:${node.port}, Kết nối: ${node.connected ? '✅' : '❌'}`);
             });
         }
     });
