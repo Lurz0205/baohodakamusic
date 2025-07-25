@@ -123,29 +123,28 @@ const http = require('http');
             await command.execute(interaction, player, client);
         } catch (error) {
             console.error(error);
+            // ĐÃ SỬA: Xử lý lỗi tương tác để tránh "Interaction has already been acknowledged."
             if (interaction.deferred || interaction.replied) {
-                await interaction.followUp({ content: 'Có lỗi xảy ra khi thực hiện lệnh này!', ephemeral: true });
+                // Nếu đã defer hoặc reply, dùng followUp
+                await interaction.followUp({ content: 'Có lỗi xảy ra khi thực hiện lệnh này!', ephemeral: true }).catch(e => console.error('Lỗi khi followUp:', e));
             } else {
-                await interaction.reply({ content: 'Có lỗi xảy ra khi thực hiện lệnh này!', ephemeral: true });
+                // Nếu chưa, dùng reply
+                await interaction.reply({ content: 'Có lỗi xảy ra khi thực hiện lệnh này!', ephemeral: true }).catch(e => console.error('Lỗi khi reply:', e));
             }
         }
     });
 
     client.login(config.BOT_TOKEN);
 
-    // Kiểm tra và BUỘC kết nối Lavalink nodes sau khi bot đã sẵn sàng
+    // Kiểm tra Lavalink nodes sau khi bot đã sẵn sàng
     client.once('ready', () => {
         console.log('Client đã sẵn sàng. Đang kiểm tra Lavalink nodes...');
-        // ĐÃ THÊM: Buộc kết nối đến các Lavalink nodes
-        if (player.nodes.manager && player.nodes.manager.nodes.size > 0) { // Đảm bảo manager tồn tại
+        // ĐÃ XÓA: Loại bỏ hoàn toàn logic buộc kết nối Lavalink vì nó không hoạt động như mong đợi
+        /*
+        if (player.nodes.manager && player.nodes.manager.nodes.size > 0) {
             console.log('Đang cố gắng kết nối các Lavalink nodes đã cấu hình...');
             player.nodes.manager.nodes.forEach(node => {
                 if (!node.connected) {
-                    // Gọi connect() trên từng node nếu nó chưa kết nối
-                    // Lưu ý: Trong một số phiên bản discord-player,
-                    // việc gọi node.connect() trực tiếp có thể không cần thiết
-                    // hoặc không phải là cách được khuyến nghị.
-                    // Nhưng chúng ta sẽ thử để tạo ra log debug.
                     try {
                         node.connect();
                         console.log(`Đã gửi yêu cầu kết nối cho node ${node.id}`);
@@ -157,11 +156,22 @@ const http = require('http');
         } else {
             console.warn('Không có Lavalink node nào được cấu hình trong player.nodes.manager.nodes. Vui lòng kiểm tra config.js.');
         }
+        */
 
+        // ĐÃ SỬA: Log trạng thái các node đã cấu hình ban đầu từ config
+        if (config.LAVALINK_NODES.length === 0) {
+            console.warn('Không có Lavalink node nào được cấu hình trong config.js.');
+        } else {
+            console.log(`Tìm thấy ${config.LAVALINK_NODES.length} Lavalink nodes được cấu hình.`);
+            config.LAVALINK_NODES.forEach((nodeConfig, index) => {
+                // Chúng ta không thể biết trạng thái kết nối ở đây nếu không có API để buộc kết nối
+                console.log(`Node cấu hình ${index + 1}: Host: ${nodeConfig.host}:${nodeConfig.port}`);
+            });
+        }
 
-        // Log trạng thái cache sau khi cố gắng kết nối
+        // Log trạng thái cache (chỉ chứa các node đã kết nối)
         if (player.nodes.cache.size === 0) {
-            console.warn('Sau khi cố gắng kết nối, không có Lavalink node nào đang kết nối trong cache của player.');
+            console.warn('Hiện tại không có Lavalink node nào đang kết nối trong cache của player. Bot sẽ cố gắng kết nối khi có yêu cầu phát nhạc.');
         } else {
             console.log(`Tìm thấy ${player.nodes.cache.size} Lavalink nodes đang kết nối trong cache.`);
             player.nodes.cache.forEach(node => {
