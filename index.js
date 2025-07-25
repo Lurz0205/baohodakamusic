@@ -7,6 +7,7 @@ const fs = require('fs');
 const path = require('path');
 const config = require('./config');
 const http = require('http');
+const WebSocket = require('ws'); // Đảm bảo import ws
 
 (async () => {
     const client = new Client({
@@ -20,16 +21,31 @@ const http = require('http');
     client.commands = new Collection();
     client.config = config;
 
+    console.log('Bắt đầu khởi tạo Discord Player...');
     const player = new Player(client, {
         ytdlOptions: {
             filter: 'audioonly',
             quality: 'highestaudio',
             highWaterMark: 1 << 25,
         },
-        nodes: config.LAVALINK_NODES,
+        nodes: config.LAVALINK_NODES, // Cấu hình nodes trực tiếp trong constructor
+        // Thêm tùy chọn để debug sâu hơn nếu cần
+        // debug: true, // Bật debug của discord-player (sẽ log rất nhiều)
+    });
+    console.log('Discord Player đã được khởi tạo.');
+
+    // Đặt listener debug ngay sau khi player được khởi tạo
+    player.events.on('debug', (queue, message) => {
+        // Lọc các tin nhắn debug để tránh quá tải log, chỉ hiển thị những cái quan trọng
+        if (message.includes('Node') || message.includes('WebSocket') || message.includes('Connection') || message.includes('Error') || message.includes('Lavalink')) {
+            console.log(`[DEBUG PLAYER] ${message}`);
+        }
     });
 
     console.log(`Đang cấu hình ${config.LAVALINK_NODES.length} Lavalink nodes.`);
+    // Log trạng thái player.nodes.cache ngay sau khởi tạo để xem nó có rỗng không
+    console.log(`Số lượng node trong player.nodes.cache sau khởi tạo: ${player.nodes.cache.size}`);
+
 
     try {
         await player.extractors.loadMulti(DefaultExtractors);
@@ -59,22 +75,19 @@ const http = require('http');
             console.error(`⚠️ Kết nối bị từ chối cho node ${node.id}. Node có thể đang offline hoặc tường lửa chặn.`);
         } else if (error.message.includes('ETIMEDOUT')) {
             console.error(`⚠️ Hết thời gian chờ kết nối cho node ${node.id}. Vấn đề mạng hoặc node quá tải.`);
+        } else {
+            console.error(`⚠️ Lỗi không xác định từ node ${node.id}: ${error.message}`);
         }
     });
 
     player.events.on('nodeDisconnect', (node, reason) => {
-        console.warn(`⚠️ Lavalink node ${node.id} (${node.host}:${node.port}) đã ngắt kết nối. Lý do: ${reason?.code || 'Không rõ'}`);
+        console.warn(`❌ Lavalink node ${node.id} (${node.host}:${node.port}) đã ngắt kết nối. Lý do: ${reason?.code || 'Không rõ'}`);
     });
 
     player.events.on('nodesDestroy', (queue) => {
         console.warn(`Tất cả Lavalink node đã bị hủy hoặc ngắt kết nối. Hàng chờ trong guild ${queue.guild.name} sẽ bị xóa.`);
     });
 
-    player.events.on('debug', (queue, message) => {
-        if (message.includes('Node') || message.includes('WebSocket') || message.includes('Connection') || message.includes('Error')) {
-            console.log(`[DEBUG PLAYER] ${message}`);
-        }
-    });
 
     // Tải các lệnh Slash Commands
     const commandsPath = path.join(__dirname, 'commands');
@@ -129,45 +142,57 @@ const http = require('http');
 
     client.login(config.BOT_TOKEN);
 
-    // ĐÃ THÊM: Hàm để chủ động kết nối các Lavalink nodes
-    async function connectLavalinkNodes() {
-        console.log('Đang cố gắng kết nối các Lavalink nodes...');
-        for (const nodeConfig of config.LAVALINK_NODES) {
-            try {
-                // Kiểm tra xem node đã được thêm vào player.nodes.cache chưa
-                let node = player.nodes.cache.get(nodeConfig.id);
-                if (!node) {
-                    // Nếu chưa có, thêm node vào player (nếu discord-player cho phép thêm thủ công)
-                    // Trong v7.x, nodes thường được thêm qua constructor.
-                    // Nếu node chưa kết nối, player sẽ tự động thử kết nối.
-                    console.log(`Node ${nodeConfig.id} chưa có trong cache, player sẽ tự động thử kết nối.`);
-                    // player.nodes.add(nodeConfig); // Phương thức này không có trong v7.x
-                    // Vì nodes đã được truyền vào constructor, player sẽ quản lý việc kết nối.
-                    // Chúng ta chỉ cần đợi các sự kiện nodeConnect/nodeError
-                } else if (!node.connected) {
-                    // Nếu node đã có nhưng chưa kết nối, log để theo dõi
-                    console.log(`Node ${nodeConfig.id} đã có trong cache nhưng chưa kết nối. Đang chờ player xử lý.`);
-                } else {
-                    console.log(`Node ${nodeConfig.id} đã kết nối.`);
-                }
-            } catch (error) {
-                console.error(`Lỗi khi xử lý node ${nodeConfig.id}:`, error.message);
-            }
-        }
-        // Cho một khoảng thời gian để các kết nối được thiết lập
-        setTimeout(() => {
-            const connectedNodes = player.nodes.cache.filter(n => n.connected).size;
-            console.log(`Sau khi kiểm tra, có ${connectedNodes} Lavalink node đang kết nối.`);
-            if (connectedNodes < 2) {
-                console.warn('Cảnh báo: Ít hơn 2 Lavalink node đang hoạt động. Có thể ảnh hưởng đến độ ổn định.');
-            }
-        }, 5000); // Đợi 5 giây để các kết nối có thời gian thiết lập
-    }
-
-    client.once('ready', () => {
+    client.once('ready', async () => { // Đã thêm async
         console.log('Client đã sẵn sàng. Đang kiểm tra Lavalink nodes...');
-        connectLavalinkNodes(); // Gọi hàm kiểm tra và kết nối nodes
+
+        // Đợi một chút để player có thời gian khởi tạo kết nối
+        await new Promise(resolve => setTimeout(resolve, 3000)); // Đợi 3 giây
+
+        const connectedNodes = player.nodes.cache.filter(n => n.connected).size;
+        console.log(`Sau khi chờ, có ${connectedNodes} Lavalink node đang kết nối.`);
+
+        if (connectedNodes < 2) {
+            console.warn('Cảnh báo: Ít hơn 2 Lavalink node đang hoạt động. Có thể ảnh hưởng đến độ ổn định.');
+        }
+
+        // THÊM: Kiểm tra kết nối WebSocket trực tiếp đến node đầu tiên
+        // Đảm bảo ws được import và node đầu tiên tồn tại
+        if (config.LAVALINK_NODES.length > 0) {
+            const firstNode = config.LAVALINK_NODES[0];
+            const wsUrl = `${firstNode.secure ? 'wss' : 'ws'}://${firstNode.host}:${firstNode.port}/v4/websocket`;
+            const headers = {
+                'Authorization': firstNode.authorization,
+                'User-Id': client.user.id,
+                'Client-Name': client.user.username
+            };
+
+            console.log(`Đang thử kết nối WebSocket trực tiếp đến: ${wsUrl}`);
+            console.log(`Với headers: ${JSON.stringify(headers)}`);
+
+            try {
+                const ws = new WebSocket(wsUrl, { headers: headers });
+
+                ws.onopen = () => {
+                    console.log(`[WEBSOCKET TEST] ✅ Kết nối WebSocket trực tiếp đến ${wsUrl} thành công.`);
+                    ws.close(); // Đóng kết nối sau khi kiểm tra
+                };
+
+                ws.onerror = (error) => {
+                    console.error(`[WEBSOCKET TEST] ❌ Lỗi kết nối WebSocket trực tiếp đến ${wsUrl}:`, error.message);
+                    if (error.code) console.error(`[WEBSOCKET TEST] Mã lỗi: ${error.code}`);
+                };
+
+                ws.onclose = (code, reason) => {
+                    console.log(`[WEBSOCKET TEST] Kết nối WebSocket trực tiếp đến ${wsUrl} đã đóng. Mã: ${code}, Lý do: ${reason.toString()}`);
+                };
+            } catch (wsError) {
+                console.error(`[WEBSOCKET TEST] Lỗi khi khởi tạo WebSocket:`, wsError.message);
+            }
+        } else {
+            console.warn('Không có Lavalink node nào được cấu hình để thực hiện kiểm tra WebSocket trực tiếp.');
+        }
     });
+
 
     const PORT = process.env.PORT || 3000;
     const server = http.createServer((req, res) => {
