@@ -93,10 +93,15 @@ const http = require('http');
         // Đăng ký các sự kiện của LavalinkManager
         lavalink.on('nodeConnect', (node) => {
             console.log(`✅ Lavalink node ${node.id} (${node.host}:${node.port}) đã kết nối thành công.`);
+            console.log(`Hiện có ${lavalink.nodes.filter(n => n.connected).size} node Lavalink đang kết nối.`);
         });
 
         lavalink.on('nodeError', (node, error) => {
             console.error(`❌ Lỗi từ Lavalink node ${node.id}:`, error.message);
+            // THÊM: Log chi tiết hơn về lỗi xác thực
+            if (error.message.includes('403 Forbidden') || error.message.includes('Unauthorized')) {
+                console.error(`⚠️ Lỗi xác thực (403 Forbidden) cho node ${node.id}. Vui lòng kiểm tra lại mật khẩu (authorization) của node này trong config.js. Mật khẩu Lavalink thường là một chuỗi ký tự, không phải URL Discord.`);
+            }
         });
 
         lavalink.on('nodeDisconnect', (node, reason) => {
@@ -126,14 +131,11 @@ const http = require('http');
             console.log(`Player bị hủy cho guild ${player.guildId}`);
         });
 
-        // ĐÃ SỬA: Di chuyển việc log và lặp qua các node vào một setTimeout
-        // để đảm bảo lavalink.nodes đã được populate đầy đủ sau khi init().
-        setTimeout(() => {
-            console.log(`Đã khởi tạo Lavalink Manager với ${lavalink.nodes.size} node.`);
-            lavalink.nodes.forEach(node => {
-                console.log(`Node ${node.id}: Host: ${node.host}:${node.port}, Trạng thái: ${node.connected ? '✅ Đã kết nối' : '❌ Ngắt kết nối'}`);
-            });
-        }, 1000); // Đợi 1 giây để đảm bảo nodes được populate
+        // ĐÃ SỬA: Log trạng thái nodes ngay sau init() với optional chaining
+        console.log(`Đã khởi tạo Lavalink Manager với ${lavalink.nodes?.size || 0} node được cấu hình.`);
+        lavalink.nodes?.forEach(node => {
+            console.log(`Node ${node.id}: Host: ${node.host}:${node.port}, Trạng thái: ${node.connected ? '✅ Đã kết nối' : '❌ Ngắt kết nối'}`);
+        });
     });
 
 
