@@ -18,25 +18,42 @@ module.exports = {
             return interaction.reply({ content: 'Bạn phải ở trong một kênh thoại để phát nhạc!', ephemeral: true });
         }
 
+        // Defer ngay lập tức để tránh lỗi Unknown interaction
         await interaction.deferReply();
 
-        let searchEngineType = QueryType.Auto;
-
-        // Kiểm tra nếu truy vấn không phải là một URL, thì ưu tiên tìm kiếm trên YouTube
-        // Regex đơn giản để kiểm tra URL. Có thể cần regex phức tạp hơn cho các trường hợp edge.
-        const urlRegex = /^(https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|www\.[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9]+\.[^\s]{2,}|[a-zA-Z0-9]+\.[^\s]{2,})$/i;
-        if (!urlRegex.test(query)) {
-            // Nếu không phải URL, ưu tiên tìm kiếm trên YouTube
-            searchEngineType = QueryType.YouTubeSearch;
-            // Để tìm kiếm Spotify bằng tên, bạn sẽ cần một lệnh riêng hoặc logic phức tạp hơn
-            // vì QueryType.SpotifySearch chỉ hoạt động tốt với các truy vấn cụ thể.
-            // Để đơn giản, chúng ta sẽ tập trung vào YouTube cho tìm kiếm bằng tên.
-        }
-
         try {
-            const { track } = await player.play(channel, query, {
+            let searchResult;
+            // Kiểm tra xem truy vấn có phải là URL hợp lệ mà discord-player có thể xử lý không
+            // QueryType.Auto sẽ tự động nhận diện các URL từ YouTube, Spotify, SoundCloud, v.v.
+            // Nếu không phải URL, chúng ta sẽ ép buộc tìm kiếm trên YouTube.
+            if (query.startsWith('http://') || query.startsWith('https://')) {
+                searchResult = await player.search(query, {
+                    requestedBy: interaction.user,
+                    searchEngine: QueryType.Auto // Để xử lý các link
+                });
+            } else {
+                // Nếu không phải URL, ưu tiên tìm kiếm trên YouTube
+                searchResult = await player.search(query, {
+                    requestedBy: interaction.user,
+                    searchEngine: QueryType.YouTubeSearch // Ép buộc tìm kiếm YouTube
+                });
+
+                // Nếu YouTube không tìm thấy hoặc kết quả không phù hợp, thử Spotify
+                if (!searchResult || searchResult.isEmpty()) {
+                    searchResult = await player.search(query, {
+                        requestedBy: interaction.user,
+                        searchEngine: QueryType.SpotifySearch // Thử Spotify nếu YouTube không có
+                    });
+                }
+            }
+
+
+            if (!searchResult || searchResult.isEmpty()) {
+                return interaction.followUp({ content: 'Không tìm thấy kết quả phù hợp trên YouTube hoặc Spotify. Vui lòng thử lại với từ khóa khác hoặc một liên kết trực tiếp.' });
+            }
+
+            const { track } = await player.play(channel, searchResult.tracks[0], {
                 requestedBy: interaction.user,
-                searchEngine: searchEngineType, // Sử dụng searchEngine đã xác định
                 metadata: { channel: interaction.channel } // Đảm bảo kênh được truyền
             });
 
@@ -55,11 +72,16 @@ module.exports = {
                     }]
                 });
             } else {
-                return interaction.followUp({ content: 'Không tìm thấy kết quả phù hợp trên YouTube. Vui lòng thử lại với từ khóa khác hoặc một liên kết trực tiếp.' });
+                return interaction.followUp({ content: 'Đã xảy ra lỗi khi thêm bài hát vào hàng chờ.' });
             }
         } catch (e) {
             console.error(e);
-            return interaction.followUp({ content: `Đã xảy ra lỗi khi phát nhạc: ${e.message}` });
+            // Đảm bảo chỉ gửi followUp nếu chưa được phản hồi
+            if (interaction.deferred || interaction.replied) {
+                await interaction.followUp({ content: `Đã xảy ra lỗi khi phát nhạc: ${e.message}`, ephemeral: true });
+            } else {
+                await interaction.reply({ content: `Đã xảy ra lỗi khi phát nhạc: ${e.message}`, ephemeral: true });
+            }
         }
     },
 };
