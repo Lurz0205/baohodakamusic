@@ -31,8 +31,16 @@ const http = require('http');
         nodes: config.LAVALINK_NODES,
     });
 
+    // ĐÃ SỬA: Đặt listener debug ngay sau khi player được khởi tạo
+    player.events.on('debug', (queue, message) => {
+        console.log(`[DEBUG] ${message}`);
+    });
+
     // Logging để kiểm tra xem Lavalink nodes có được đọc từ config không
     console.log(`Đang cấu hình ${config.LAVALINK_NODES.length} Lavalink nodes.`);
+    // THÊM: Log trực tiếp đối tượng player.nodes để kiểm tra nội dung
+    console.log('Trạng thái player.nodes ngay sau khởi tạo:', player.nodes);
+    console.log('Số lượng node trong player.nodes.cache:', player.nodes.cache.size);
 
 
     // Đảm bảo extractors được tải đúng cách
@@ -58,29 +66,20 @@ const http = require('http');
     // THÊM CÁC SỰ KIỆN LỖI LAVALINK NÀY
     player.events.on('nodeError', (node, error) => {
         console.error(`Lỗi từ Lavalink node ${node.id}:`, error);
-        // Có thể gửi thông báo tới kênh quản trị hoặc log chi tiết hơn
     });
 
     player.events.on('nodesDestroy', (queue) => {
         console.warn(`Tất cả Lavalink node đã bị hủy hoặc ngắt kết nối. Hàng chờ trong guild ${queue.guild.name} sẽ bị xóa.`);
-        // Có thể thông báo cho người dùng hoặc thực hiện các hành động khôi phục
     });
 
-    // THÊM SỰ KIỆN KẾT NỐI NODE THÀNH CÔNG
     player.events.on('nodeConnect', (node) => {
         console.log(`✅ Lavalink node ${node.id} (${node.host}:${node.port}) đã kết nối thành công.`);
     });
 
-    // THÊM SỰ KIỆN NGẮT KẾT NỐI NODE
     player.events.on('nodeDisconnect', (node, reason) => {
         console.warn(`❌ Lavalink node ${node.id} (${node.host}:${node.port}) đã ngắt kết nối. Lý do: ${reason?.code || 'Không rõ'}`);
     });
 
-
-    // ĐÃ SỬA: Bỏ comment dòng này để bật debug log chi tiết từ discord-player
-    player.events.on('debug', (queue, message) => {
-        console.log(`[DEBUG] ${message}`);
-    });
 
     // Tải các lệnh Slash Commands
     const commandsPath = path.join(__dirname, 'commands');
