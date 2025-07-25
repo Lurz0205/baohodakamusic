@@ -1,14 +1,13 @@
 // index.js
 require('dotenv').config();
 const { Client, GatewayIntentBits, Collection } = require('discord.js');
-const { LavalinkManager } = require('lavalink-client'); // Import LavalinkManager
-const { joinVoiceChannel } = require('@discordjs/voice'); // Cần cho kết nối thoại
+const { LavalinkManager } = require('lavalink-client');
+const { joinVoiceChannel } = require('@discordjs/voice');
 const fs = require('fs');
 const path = require('path');
 const config = require('./config');
 const http = require('http');
 
-// Bọc toàn bộ logic khởi tạo bot trong một hàm async IIFE để sử dụng await
 (async () => {
     const client = new Client({
         intents: [
@@ -21,11 +20,8 @@ const http = require('http');
     client.commands = new Collection();
     client.config = config;
 
-    // KHÔNG KHỞI TẠO LAVALINKMANAGER Ở ĐÂY!
-    // Chúng ta sẽ khởi tạo nó trong sự kiện 'ready' để đảm bảo client.user có giá trị.
-    let lavalink;
+    let lavalink; // Khai báo biến lavalink ở phạm vi này
 
-    // Tải các lệnh Slash Commands
     const commandsPath = path.join(__dirname, 'commands');
     const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('.js'));
 
@@ -39,7 +35,6 @@ const http = require('http');
         }
     }
 
-    // Tải các sự kiện của Client (như ready)
     const clientEventsPath = path.join(__dirname, 'events', 'client');
     const clientEventFiles = fs.readdirSync(clientEventsPath).filter(file => file.endsWith('.js'));
 
@@ -53,7 +48,6 @@ const http = require('http');
         }
     }
 
-    // Xử lý tương tác lệnh Slash
     client.on('interactionCreate', async interaction => {
         if (!interaction.isChatInputCommand()) return;
 
@@ -65,7 +59,6 @@ const http = require('http');
         }
 
         try {
-            // Truyền instance của LavalinkManager vào lệnh
             await command.execute(interaction, lavalink, client);
         } catch (error) {
             console.error(error);
@@ -79,24 +72,28 @@ const http = require('http');
 
     client.login(config.BOT_TOKEN);
 
-    // ĐÃ SỬA: Khởi tạo LavalinkManager bên trong sự kiện 'ready'
     client.once('ready', () => {
         console.log('Client đã sẵn sàng. Đang khởi tạo Lavalink Manager...');
 
+        // ĐÃ SỬA: Khởi tạo LavalinkManager và gọi init() ngay lập tức
         lavalink = new LavalinkManager({
-            nodes: config.LAVALINK_NODES, // Cấu hình các Lavalink nodes từ config
+            nodes: config.LAVALINK_NODES,
             sendToShard: (guildId, payload) => {
                 const guild = client.guilds.cache.get(guildId);
                 if (guild) guild.shard.send(payload);
             },
             client: {
-                id: client.user.id, // client.user đã có giá trị ở đây
+                id: client.user.id,
                 username: client.user.username,
             },
             autoSkip: true,
         });
 
-        // Đăng ký các sự kiện của LavalinkManager
+        // ĐÃ SỬA: Gọi init() ngay sau khi tạo instance LavalinkManager
+        lavalink.init({ id: client.user.id, username: client.user.username });
+
+        // Đăng ký các sự kiện của LavalinkManager (có thể giữ nguyên ở đây hoặc di chuyển lên trên)
+        // Việc đăng ký sự kiện sau init() vẫn hoạt động tốt.
         lavalink.on('nodeConnect', (node) => {
             console.log(`✅ Lavalink node ${node.id} (${node.host}:${node.port}) đã kết nối thành công.`);
         });
@@ -110,15 +107,19 @@ const http = require('http');
         });
 
         lavalink.on('trackStart', (player, track) => {
-            console.log(`🎶 Đang phát: ${track.title} trên guild ${player.guildId}`);
+            console.log(`🎶 Đang phát: ${track.info.title} trên guild ${player.guildId}`);
             // Bạn có thể gửi tin nhắn thông báo bài hát đang phát tại đây
-            // Ví dụ: client.channels.cache.get(player.textChannelId).send(`🎶 Đang phát: **${track.title}**`);
+            if (player.textChannelId) {
+                client.channels.cache.get(player.textChannelId)?.send(`🎶 Đang phát: **${track.info.title}**`);
+            }
         });
 
         lavalink.on('queueEnd', (player) => {
             console.log(`Hàng chờ kết thúc trên guild ${player.guildId}`);
-            // Bạn có thể ngắt kết nối kênh thoại khi hàng chờ kết thúc
-            // player.destroy();
+            if (player.textChannelId) {
+                client.channels.cache.get(player.textChannelId)?.send('Hàng chờ đã kết thúc. Rời kênh thoại.');
+            }
+            player.destroy(); // Hủy player và rời kênh thoại
         });
 
         lavalink.on('playerCreate', (player) => {
