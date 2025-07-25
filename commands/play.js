@@ -19,7 +19,8 @@ module.exports = {
         }
 
         // ĐÃ SỬA: Kiểm tra xem có Lavalink node nào đang kết nối không
-        const connectedNodes = player.nodes.manager.nodes.filter(node => node.connected);
+        // Các node chỉ được thêm vào player.nodes.cache khi chúng kết nối thành công.
+        const connectedNodes = player.nodes.cache;
         if (connectedNodes.size === 0) {
             return interaction.reply({ content: 'Bot không thể kết nối với Lavalink node nào. Vui lòng thử lại sau hoặc liên hệ quản trị viên.', ephemeral: true });
         }
