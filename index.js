@@ -12,7 +12,7 @@ const http = require('http');
     const client = new Client({
         intents: [
             GatewayIntentBits.Guilds,
-            GatewayIntentBits.GuildVoiceStates,
+            GatewayIntentBits.GuildVoiceStates, // Đảm bảo đúng chính tả
             GatewayIntentBits.MessageContent
         ]
     });
@@ -27,14 +27,11 @@ const http = require('http');
             quality: 'highestaudio',
             highWaterMark: 1 << 25,
         },
-        // Trong v6.x, nodes thường được truyền trực tiếp vào constructor
-        // hoặc thêm sau bằng player.nodes.add()
         nodes: config.LAVALINK_NODES,
-        use  // This option is deprecated in v7 but might be relevant for v6.x
+        // ĐÃ XÓA DÒNG GÂY LỖI 'use'
     });
 
     // Xử lý các sự kiện của Discord Player (v6.x)
-    // Các sự kiện có thể có tên khác trong v6.x
     player.on('error', (queue, error) => {
         console.error(`Lỗi từ queue: ${error.message}`);
     });
@@ -56,25 +53,32 @@ const http = require('http');
 
     player.on('trackStart', (queue, track) => {
         console.log(`🎶 Đang phát: ${track.title} trên guild ${queue.guild.id}`);
-        // Gửi tin nhắn thông báo bài hát đang phát
-        queue.metadata.channel.send({
-            embeds: [{
-                title: `▶️ Bắt đầu phát: ${track.title}`,
-                description: `Thời lượng: ${track.duration}\nKênh: ${track.author}\nNguồn: ${track.source}`,
-                url: track.url,
-                thumbnail: { url: track.thumbnail },
-                color: client.config.EMBED_COLOR,
-                footer: {
-                    text: `Yêu cầu bởi: ${track.requestedBy.tag}`,
-                    icon_url: track.requestedBy.displayAvatarURL({ dynamic: true })
-                }
-            }]
-        }).catch(console.error);
+        if (queue.metadata && queue.metadata.channel) {
+            queue.metadata.channel.send({
+                embeds: [{
+                    title: `▶️ Bắt đầu phát: ${track.title}`,
+                    description: `Thời lượng: ${track.duration}\nKênh: ${track.author}\nNguồn: ${track.source}`,
+                    url: track.url,
+                    thumbnail: { url: track.thumbnail },
+                    color: client.config.EMBED_COLOR,
+                    footer: {
+                        text: `Yêu cầu bởi: ${track.requestedBy.tag}`,
+                        icon_url: track.requestedBy.displayAvatarURL({ dynamic: true })
+                    }
+                }]
+            }).catch(console.error);
+        } else {
+            console.warn('Không tìm thấy kênh để gửi thông báo trackStart. Metadata hoặc channel bị thiếu.');
+        }
     });
 
     player.on('queueEnd', (queue) => {
         console.log(`Hàng chờ kết thúc trên guild ${queue.guild.id}`);
-        queue.metadata.channel.send('Hàng chờ đã kết thúc. Rời kênh thoại.').catch(console.error);
+        if (queue.metadata && queue.metadata.channel) {
+            queue.metadata.channel.send('Hàng chờ đã kết thúc. Rời kênh thoại.').catch(console.error);
+        } else {
+            console.warn('Không tìm thấy kênh để gửi thông báo queueEnd. Metadata hoặc channel bị thiếu.');
+        }
         queue.destroy(); // Hủy queue và rời kênh thoại
     });
 
