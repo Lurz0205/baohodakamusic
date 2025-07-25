@@ -7,73 +7,73 @@ module.exports = {
 
     LAVALINK_NODES: [
         {
-            id: 'node-1', // ID duy nhất cho node
+            id: 'AjieDev-V3', // Sử dụng identifier làm ID
             host: 'lava-v3.ajieblogs.eu.org',
             port: 443,
-            authorization: 'youshallnotpass', // Thay bằng mật khẩu của node nếu có
-            secure: true // Đặt true nếu là SSL (port 443)
+            authorization: 'https://dsc.gg/ajidevserver', // Mật khẩu thực tế
+            secure: true
         },
         {
-            id: 'node-2',
+            id: 'Serenetia-V3',
             host: 'lavalinkv3-id.serenetia.com',
             port: 443,
-            authorization: 'youshallnotpass',
+            authorization: 'https://dsc.gg/ajidevserver',
             secure: true
         },
         {
-            id: 'node-3',
+            id: 'AjieDev-V4',
             host: 'lava-v4.ajieblogs.eu.org',
             port: 443,
-            authorization: 'youshallnotpass',
+            authorization: 'https://dsc.gg/ajidevserver',
             secure: true
         },
         {
-            id: 'node-4',
+            id: 'Fedot_Compot-main',
             host: 'lavalink.fedotcompot.net',
             port: 443,
-            authorization: 'youshallnotpass',
+            authorization: 'https://discord.gg/bXXCZzKAyp',
             secure: true
         },
         {
-            id: 'node-5',
+            id: 'Serenetia-V4',
             host: 'lavalinkv4.serenetia.com',
             port: 443,
-            authorization: 'youshallnotpass',
+            authorization: 'https://dsc.gg/ajidevserver',
             secure: true
         },
         {
-            id: 'node-6',
+            id: 'INZEWORLD.COM (DE)',
             host: 'lava.inzeworld.com',
             port: 3128,
-            authorization: 'youshallnotpass',
-            secure: false // Đặt false nếu không phải SSL
+            authorization: 'saher.inzeworld.com',
+            secure: false
         },
         {
-            id: 'node-7',
+            id: 'RY4N',
             host: '89.251.21.22',
             port: 25691,
-            authorization: 'youshallnotpass',
+            authorization: 'youshallnotpass', // Mật khẩu này có vẻ là "youshallnotpass" thực tế
             secure: false
         },
         {
-            id: 'node-8',
+            id: 'RY4N X ARINO',
             host: '79.110.236.32',
             port: 9033,
-            authorization: 'youshallnotpass',
+            authorization: 'discord.gg/W2GheK3F9m',
             secure: false
         },
         {
-            id: 'node-9',
+            id: 'AjieDev-LDP-NonSSL',
             host: 'lava-all.ajieblogs.eu.org',
             port: 80,
-            authorization: 'youshallnotpass',
+            authorization: 'https://dsc.gg/ajidevserver',
             secure: false
         },
         {
-            id: 'node-10',
+            id: 'Serenetia-LDP-NonSSL',
             host: 'lavalink.serenetia.com',
             port: 80,
-            authorization: 'youshallnotpass',
+            authorization: 'https://dsc.gg/ajidevserver',
             secure: false
         }
     ]
