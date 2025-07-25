@@ -6,7 +6,7 @@ const { DefaultExtractors } = require('@discord-player/extractor');
 const fs = require('fs');
 const path = require('path');
 const config = require('./config');
-const http = require('http'); // ĐÃ SỬA: Chỉ cần require('http') một cách bình thường
+const http = require('http');
 
 // Bọc toàn bộ logic khởi tạo bot trong một hàm async IIFE để sử dụng await
 (async () => {
@@ -28,8 +28,11 @@ const http = require('http'); // ĐÃ SỬA: Chỉ cần require('http') một c
             quality: 'highestaudio',
             highWaterMark: 1 << 25,
         },
-        nodes: config.LAVALINK_NODES,
+        nodes: config.LAVALINK_NODES, // Đảm bảo các node được truyền vào đây
     });
+
+    // Logging để kiểm tra xem Lavalink nodes có được đọc từ config không
+    console.log(`Đang cấu hình ${config.LAVALINK_NODES.length} Lavalink nodes.`);
 
     const filteredExtractors = DefaultExtractors.filter(
         (extractor) =>
@@ -114,6 +117,9 @@ const http = require('http'); // ĐÃ SỬA: Chỉ cần require('http') một c
     });
 
     client.login(config.BOT_TOKEN);
+
+    // THÊM DÒNG NÀY ĐỂ KẾT NỐI LAVALINK NODE MỘT CÁCH TƯỜNG MINH
+    player.nodes.connect();
 
     const PORT = process.env.PORT || 3000;
     const server = http.createServer((req, res) => {
