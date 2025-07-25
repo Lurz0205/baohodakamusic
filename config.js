@@ -1,82 +1,80 @@
 // config.js
 module.exports = {
-    BOT_TOKEN: process.env.BOT_TOKEN,
-    CLIENT_ID: process.env.CLIENT_ID,
-    GUILD_ID: process.env.GUILD_ID,
+    BOT_TOKEN: process.env.BOT_TOKEN || 'YOUR_BOT_TOKEN',
+    CLIENT_ID: process.env.CLIENT_ID || 'YOUR_CLIENT_ID',
+    GUILD_ID: process.env.GUILD_ID || 'YOUR_GUILD_ID',
+    EMBED_COLOR: '#0099ff', // Màu mặc định cho embeds
+
     LAVALINK_NODES: [
         {
-            identifier: "AjieDev-V3",
-            password: "https://dsc.gg/ajidevserver",
-            host: "lava-v3.ajieblogs.eu.org",
+            id: 'node-1', // ID duy nhất cho node
+            host: 'lava-v3.ajieblogs.eu.org',
             port: 443,
+            authorization: 'youshallnotpass', // Thay bằng mật khẩu của node nếu có
+            secure: true // Đặt true nếu là SSL (port 443)
+        },
+        {
+            id: 'node-2',
+            host: 'lavalinkv3-id.serenetia.com',
+            port: 443,
+            authorization: 'youshallnotpass',
             secure: true
         },
         {
-            identifier: "Serenetia-V3",
-            password: "https://dsc.gg/ajidevserver",
-            host: "lavalinkv3-id.serenetia.com",
+            id: 'node-3',
+            host: 'lava-v4.ajieblogs.eu.org',
             port: 443,
+            authorization: 'youshallnotpass',
             secure: true
         },
         {
-            identifier: "AjieDev-V4",
-            password: "https://dsc.gg/ajidevserver",
-            host: "lava-v4.ajieblogs.eu.org",
+            id: 'node-4',
+            host: 'lavalink.fedotcompot.net',
             port: 443,
+            authorization: 'youshallnotpass',
             secure: true
         },
         {
-            identifier: "Fedot_Compot-main",
-            password: "https://discord.gg/bXXCZzKAyp",
-            host: "lavalink.fedotcompot.net",
+            id: 'node-5',
+            host: 'lavalinkv4.serenetia.com',
             port: 443,
+            authorization: 'youshallnotpass',
             secure: true
         },
         {
-            identifier: "Serenetia-V4",
-            password: "https://dsc.gg/ajidevserver",
-            host: "lavalinkv4.serenetia.com",
-            port: 443,
-            secure: true
-        },
-        {
-            identifier: "INZEWORLD.COM (DE)",
-            password: "saher.inzeworld.com",
-            host: "lava.inzeworld.com",
+            id: 'node-6',
+            host: 'lava.inzeworld.com',
             port: 3128,
-            secure: false
+            authorization: 'youshallnotpass',
+            secure: false // Đặt false nếu không phải SSL
         },
         {
-            identifier: "RY4N",
-            password: "youshallnotpass",
-            host: "89.251.21.22",
+            id: 'node-7',
+            host: '89.251.21.22',
             port: 25691,
+            authorization: 'youshallnotpass',
             secure: false
         },
         {
-            identifier: "RY4N X ARINO",
-            password: "discord.gg/W2GheK3F9m",
-            host: "79.110.236.32",
+            id: 'node-8',
+            host: '79.110.236.32',
             port: 9033,
+            authorization: 'youshallnotpass',
             secure: false
         },
         {
-            identifier: "AjieDev-LDP-NonSSL",
-            password: "https://dsc.gg/ajidevserver",
-            host: "lava-all.ajieblogs.eu.org",
+            id: 'node-9',
+            host: 'lava-all.ajieblogs.eu.org',
             port: 80,
+            authorization: 'youshallnotpass',
             secure: false
         },
         {
-            identifier: "Serenetia-LDP-NonSSL",
-            password: "https://dsc.gg/ajidevserver",
-            host: "lavalink.serenetia.com",
+            id: 'node-10',
+            host: 'lavalink.serenetia.com',
             port: 80,
+            authorization: 'youshallnotpass',
             secure: false
         }
-    ],
-    // Các tùy chọn khác
-    DEFAULT_VOLUME: 80,
-    MAX_QUEUE_SIZE: 200,
-    EMBED_COLOR: 0x0099ff, // Đã sửa: Chuyển từ chuỗi hex sang số nguyên
+    ]
 };
