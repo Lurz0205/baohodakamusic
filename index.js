@@ -2,12 +2,11 @@
 require('dotenv').config();
 const { Client, GatewayIntentBits, Collection } = require('discord.js');
 const { Player } = require('discord-player');
-// Import DefaultExtractors (chứa tất cả các extractors mặc định)
 const { DefaultExtractors } = require('@discord-player/extractor');
 const fs = require('fs');
 const path = require('path');
 const config = require('./config');
-const http = require('http');
+const http = require = require('http');
 
 // Bọc toàn bộ logic khởi tạo bot trong một hàm async IIFE để sử dụng await
 (async () => {
@@ -32,16 +31,13 @@ const http = require('http');
         nodes: config.LAVALINK_NODES,
     });
 
-    // ĐÃ SỬA: Lọc DefaultExtractors để chỉ tải YouTube và Spotify
     const filteredExtractors = DefaultExtractors.filter(
         (extractor) =>
             extractor.identifier === 'YouTubeExtractor' ||
             extractor.identifier === 'SpotifyExtractor'
-            // Có thể thêm các extractor khác nếu muốn, ví dụ: 'AppleMusicExtractor'
     );
 
     await player.extractors.loadMulti(filteredExtractors);
-
 
     // Xử lý các sự kiện của Discord Player
     fs.readdirSync(path.join(__dirname, 'events', 'discord-player')).forEach(file => {
@@ -49,6 +45,21 @@ const http = require('http');
         if (event.name) {
             player.events.on(event.name, (...args) => event.execute(...args));
         }
+    });
+
+    // THÊM CÁC SỰ KIỆN LỖI LAVALINK NÀY
+    player.events.on('nodeError', (node, error) => {
+        console.error(`Lỗi từ Lavalink node ${node.id}:`, error);
+        // Có thể gửi thông báo tới kênh quản trị hoặc log chi tiết hơn
+    });
+
+    player.events.on('nodesDestroy', (queue) => {
+        console.warn(`Tất cả Lavalink node đã bị hủy hoặc ngắt kết nối. Hàng chờ trong guild ${queue.guild.name} sẽ bị xóa.`);
+        // Có thể thông báo cho người dùng hoặc thực hiện các hành động khôi phục
+    });
+
+    player.events.on('debug', (queue, message) => {
+        // console.log(`[DEBUG] ${message}`); // Bỏ comment nếu muốn xem debug log chi tiết
     });
 
     // Tải các lệnh Slash Commands
