@@ -2,10 +2,11 @@
 require('dotenv').config();
 const { Client, GatewayIntentBits, Collection } = require('discord.js');
 const { Player } = require('discord-player');
-const { DefaultExtractors } = require('@discord-player/extractor'); // Thêm import này
+const { DefaultExtractors } = require('@discord-player/extractor');
 const fs = require('fs');
 const path = require('path');
 const config = require('./config');
+const http = require('http'); // Thêm import này
 
 // Bọc toàn bộ logic khởi tạo bot trong một hàm async IIFE để sử dụng await
 (async () => {
@@ -13,7 +14,7 @@ const config = require('./config');
         intents: [
             GatewayIntentBits.Guilds,
             GatewayIntentBits.GuildVoiceStates,
-            GatewayIntentBits.MessageContent // Cần cho các lệnh không phải slash commands, hoặc nếu bạn muốn đọc tin nhắn
+            GatewayIntentBits.MessageContent
         ]
     });
 
@@ -25,14 +26,13 @@ const config = require('./config');
         ytdlOptions: {
             filter: 'audioonly',
             quality: 'highestaudio',
-            highWaterMark: 1 << 25, // Tăng buffer để tránh giật lag
+            highWaterMark: 1 << 25,
         },
-        // Cấu hình các Lavalink node TRỰC TIẾP TẠI ĐÂY
         nodes: config.LAVALINK_NODES,
     });
 
-    // Đăng ký extractors (YouTube, Spotify, SoundCloud) - SỬA LẠI DÒNG NÀY
-    await player.extractors.loadMulti(DefaultExtractors); // Sử dụng loadMulti và await
+    // Đăng ký extractors
+    await player.extractors.loadMulti(DefaultExtractors);
 
     // Xử lý các sự kiện của Discord Player
     fs.readdirSync(path.join(__dirname, 'events', 'discord-player')).forEach(file => {
@@ -94,4 +94,17 @@ const config = require('./config');
     });
 
     client.login(config.BOT_TOKEN);
+
+    // THÊM PHẦN NÀY ĐỂ MỞ CỔNG CHO RENDER VÀ UPTIMEROBOT
+    const PORT = process.env.PORT || 3000; // Render sẽ cung cấp biến PORT
+    const server = http.createServer((req, res) => {
+        res.statusCode = 200;
+        res.setHeader('Content-Type', 'text/plain');
+        res.end('Discord Music Bot is running!\n');
+    });
+
+    server.listen(PORT, () => {
+        console.log(`Server HTTP đang lắng nghe trên cổng ${PORT} để giữ bot online.`);
+    });
+
 })(); // Kết thúc async IIFE
