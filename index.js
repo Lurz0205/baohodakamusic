@@ -28,7 +28,9 @@ const http = require('http');
             quality: 'highestaudio',
             highWaterMark: 1 << 25,
         },
-        nodes: config.LAVALINK_NODES,
+        // ĐÃ SỬA: Không truyền nodes vào constructor nữa.
+        // Chúng ta sẽ tạo chúng một cách tường minh sau.
+        // nodes: config.LAVALINK_NODES,
     });
 
     // ĐÃ SỬA: Đặt listener debug ngay sau khi player được khởi tạo
@@ -40,7 +42,25 @@ const http = require('http');
     console.log(`Đang cấu hình ${config.LAVALINK_NODES.length} Lavalink nodes.`);
     // THÊM: Log trực tiếp đối tượng player.nodes để kiểm tra nội dung
     console.log('Trạng thái player.nodes ngay sau khởi tạo:', player.nodes);
-    console.log('Số lượng node trong player.nodes.cache:', player.nodes.cache.size);
+    console.log('Số lượng node trong player.nodes.cache (trước khi tạo):', player.nodes.cache.size);
+
+    // ĐÃ SỬA: Tạo các Lavalink nodes một cách tường minh bằng player.nodes.create()
+    if (config.LAVALINK_NODES && config.LAVALINK_NODES.length > 0) {
+        console.log(`Đang cố gắng tạo ${config.LAVALINK_NODES.length} Lavalink nodes.`);
+        config.LAVALINK_NODES.forEach(nodeConfig => {
+            try {
+                // player.nodes.create() trả về một instance của LavalinkNode
+                const node = player.nodes.create(nodeConfig);
+                console.log(`Đã tạo node: ${node.id} (${node.host}:${node.port})`);
+            } catch (createError) {
+                console.error(`Lỗi khi tạo Lavalink node ${nodeConfig.host}:${nodeConfig.port}:`, createError);
+            }
+        });
+    } else {
+        console.warn('Không có Lavalink node nào được cấu hình trong config.js.');
+    }
+    // THÊM: Log lại số lượng node trong cache sau khi tạo
+    console.log('Số lượng node trong player.nodes.cache (sau khi tạo):', player.nodes.cache.size);
 
 
     // Đảm bảo extractors được tải đúng cách
