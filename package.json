@@ -17,10 +17,8 @@
   "author": "Your Name/Team Name",
   "license": "ISC",
   "dependencies": {
-    "lavalink-client": "^2.4.0",
-    "@discordjs/voice": "^0.17.0",
-    "@discordjs/opus": "^0.9.0",
-    "ffmpeg-static": "^5.2.0",
+    "@discord-player/extractor": "^4.5.0",
+    "discord-player": "^7.1.0",
     "discord.js": "^14.21.0",
     "dotenv": "^17.2.1"
   }
