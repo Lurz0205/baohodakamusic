@@ -10,16 +10,20 @@ module.exports = {
 
         let description = 'Trạng thái Lavalink Nodes:\n\n';
 
-        if (player.nodes.length === 0) { // Trong v6.x, player.nodes là một mảng
+        // ĐÃ SỬA: Cách truy cập nodes trong discord-player v6.x
+        // player.nodes là một Map hoặc Collection, cần chuyển đổi sang mảng để dùng forEach
+        const lavalinkNodes = Array.from(player.nodes.values()); // Chuyển đổi Map/Collection sang Array
+
+        if (lavalinkNodes.length === 0) {
             description += 'Không có Lavalink node nào được cấu hình.';
         } else {
             description += '**Nodes đã cấu hình:**\n';
-            player.nodes.forEach((node, index) => {
+            lavalinkNodes.forEach((node, index) => {
                 description += `\`${index + 1}.\` **Host:** \`${node.host}:${node.port}\`\n`;
                 description += `   **Trạng thái:** ${node.connected ? '✅ Đã kết nối' : '❌ Ngắt kết nối'}\n`;
                 if (node.connected) {
                     description += `   **Ping:** \`${node.ping}ms\`\n`;
-                    // Stats có thể có cấu trúc khác trong v6.x
+                    // Stats có thể có cấu trúc khác trong v6.x, sử dụng optional chaining
                     description += `   **Players:** \`${node.stats?.players || 0}\` đang hoạt động\n`;
                     description += `   **CPU:** \`${(node.stats?.cpu?.systemLoad * 100 || 0).toFixed(2)}%\`\n`;
                     description += `   **RAM:** \`${(node.stats?.memory?.used / 1024 / 1024 || 0).toFixed(2)}MB\`\n`;
@@ -28,7 +32,7 @@ module.exports = {
             });
         }
 
-        description += `\n**Tổng số node đang kết nối:** ${player.nodes.filter(node => node.connected).length}\n`;
+        description += `\n**Tổng số node đang kết nối:** ${lavalinkNodes.filter(node => node.connected).length}\n`;
 
         return interaction.editReply({
             embeds: [{
