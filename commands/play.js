@@ -5,7 +5,7 @@ const { QueryType } = require('discord-player');
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('play')
-        .setDescription('Phát nhạc từ YouTube hoặc Spotify.') // Cập nhật mô tả
+        .setDescription('Phát nhạc từ YouTube hoặc Spotify.')
         .addStringOption(option =>
             option.setName('query')
                 .setDescription('Tên bài hát hoặc liên kết (YouTube, Spotify)')
@@ -16,6 +16,12 @@ module.exports = {
 
         if (!channel) {
             return interaction.reply({ content: 'Bạn phải ở trong một kênh thoại để phát nhạc!', ephemeral: true });
+        }
+
+        // ĐÃ SỬA: Kiểm tra xem có Lavalink node nào đang kết nối không
+        const connectedNodes = player.nodes.manager.nodes.filter(node => node.connected);
+        if (connectedNodes.size === 0) {
+            return interaction.reply({ content: 'Bot không thể kết nối với Lavalink node nào. Vui lòng thử lại sau hoặc liên hệ quản trị viên.', ephemeral: true });
         }
 
         try {
@@ -30,19 +36,16 @@ module.exports = {
             const isUrl = query.startsWith('http://') || query.startsWith('https://');
 
             if (isUrl) {
-                // Nếu là URL, để QueryType.Auto tự động nhận diện nguồn (chỉ còn YouTube/Spotify)
                 searchResult = await player.search(query, {
                     requestedBy: interaction.user,
-                    searchEngine: QueryType.Auto
+                    searchEngine: QueryType.Auto // Sẽ chỉ tìm YouTube/Spotify vì các extractor khác đã bị gỡ
                 });
             } else {
-                // Nếu không phải URL (là text query), ưu tiên tìm kiếm trên YouTube
                 searchResult = await player.search(query, {
                     requestedBy: interaction.user,
                     searchEngine: QueryType.YouTubeSearch
                 });
 
-                // Nếu YouTube không tìm thấy hoặc kết quả không phù hợp, thử Spotify
                 if (!searchResult || searchResult.isEmpty()) {
                     searchResult = await player.search(query, {
                         requestedBy: interaction.user,
@@ -57,10 +60,11 @@ module.exports = {
 
             const trackToPlay = searchResult.tracks[0];
 
-            // ĐÃ XÓA: Không cần kiểm tra SoundCloud nữa vì extractor đã bị loại bỏ
-            // if (!isUrl && trackToPlay.source === 'soundcloud') {
-            //     return interaction.editReply({ content: 'Tìm thấy bài hát từ SoundCloud, nhưng bot chỉ phát SoundCloud qua liên kết trực tiếp khi tìm kiếm bằng tên. Vui lòng cung cấp liên kết SoundCloud nếu bạn muốn phát bài này.' });
-            // }
+            // ĐÃ THÊM: Kiểm tra nguồn của track để đảm bảo không phải SoundCloud
+            if (trackToPlay.source === 'soundcloud') {
+                return interaction.editReply({ content: 'Đã tìm thấy bài hát từ SoundCloud, nhưng bot chỉ hỗ trợ YouTube và Spotify. Vui lòng cung cấp liên kết YouTube hoặc Spotify.' });
+            }
+
 
             const { track } = await player.play(channel, trackToPlay, {
                 requestedBy: interaction.user,
