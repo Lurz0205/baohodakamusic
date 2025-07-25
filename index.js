@@ -27,17 +27,23 @@ const http = require('http');
             quality: 'highestaudio',
             highWaterMark: 1 << 25,
         },
-        nodes: config.LAVALINK_NODES,
+        nodes: config.LAVALINK_NODES, // Truyền các node đã cấu hình
+        autoRegisterExtractor: false, // Tắt tự động đăng ký extractor để kiểm soát thủ công
     });
 
-    // ĐÃ THÊM: Listener cho sự kiện 'debug' để có thêm thông tin chi tiết
-    player.on('debug', (message) => {
-        console.log(`[DEBUG PLAYER] ${message}`);
-    });
-
-    // Xử lý các sự kiện của Discord Player (v6.x)
+    // Các sự kiện của Discord Player (v6.x)
     player.on('error', (queue, error) => {
-        console.error(`Lỗi từ queue: ${error.message}`);
+        console.error(`[PLAYER ERROR] Lỗi từ queue ${queue.guild.name}: ${error.message}`);
+        if (queue.metadata && queue.metadata.channel) {
+            queue.metadata.channel.send(`Đã xảy ra lỗi khi phát nhạc: ${error.message}`).catch(e => console.error("Lỗi khi gửi tin nhắn lỗi:", e));
+        }
+    });
+
+    player.on('debug', (message) => {
+        // Chỉ log các tin nhắn debug quan trọng hơn để tránh quá tải log
+        if (message.includes('Node') || message.includes('WebSocket') || message.includes('Connection')) {
+            console.log(`[DEBUG PLAYER] ${message}`);
+        }
     });
 
     player.on('nodeConnect', (node) => {
