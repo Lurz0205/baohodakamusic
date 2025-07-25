@@ -13,7 +13,7 @@ const http = require('http');
     const client = new Client({
         intents: [
             GatewayIntentBits.Guilds,
-            GatewayIntentBits.GuildVoiceStates,
+            GatewayIntentBits.GuildVoiceVoiceStates, // Đã sửa: GuildVoiceStates
             GatewayIntentBits.MessageContent
         ]
     });
@@ -118,8 +118,7 @@ const http = require('http');
 
     client.login(config.BOT_TOKEN);
 
-    // THÊM DÒNG NÀY ĐỂ KẾT NỐI LAVALINK NODE MỘT CÁCH TƯỜNG MINH
-    player.nodes.connect();
+    // ĐÃ XÓA DÒNG NÀY: player.nodes.connect(); // Không cần gọi tường minh nữa
 
     const PORT = process.env.PORT || 3000;
     const server = http.createServer((req, res) => {
