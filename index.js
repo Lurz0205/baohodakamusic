@@ -2,6 +2,7 @@
 require('dotenv').config();
 const { Client, GatewayIntentBits, Collection } = require('discord.js');
 const { Player } = require('discord-player');
+// Import DefaultExtractors (chứa tất cả các extractors mặc định)
 const { DefaultExtractors } = require('@discord-player/extractor');
 const fs = require('fs');
 const path = require('path');
@@ -13,7 +14,7 @@ const http = require('http');
     const client = new Client({
         intents: [
             GatewayIntentBits.Guilds,
-            GatewayIntentBits.GuildVoiceStates, // ĐÃ SỬA: Lỗi chính tả đã được khắc phục
+            GatewayIntentBits.GuildVoiceStates,
             GatewayIntentBits.MessageContent
         ]
     });
@@ -34,13 +35,19 @@ const http = require('http');
     // Logging để kiểm tra xem Lavalink nodes có được đọc từ config không
     console.log(`Đang cấu hình ${config.LAVALINK_NODES.length} Lavalink nodes.`);
 
-    const filteredExtractors = DefaultExtractors.filter(
-        (extractor) =>
-            extractor.identifier === 'YouTubeExtractor' ||
-            extractor.identifier === 'SpotifyExtractor'
-    );
+    // ĐÃ SỬA: Đảm bảo extractors được tải đúng cách
+    // Phương pháp đáng tin cậy nhất là loadMulti với DefaultExtractors
+    // và sau đó có thể gỡ bỏ các extractors không mong muốn nếu cần.
+    try {
+        await player.extractors.loadMulti(DefaultExtractors);
+        // Sau khi tải tất cả, nếu bạn muốn loại bỏ SoundCloud, bạn có thể làm như sau:
+        // player.extractors.unregister('SoundCloudExtractor');
+        // console.log('Đã gỡ đăng ký SoundCloudExtractor.');
+        console.log('Đã tải tất cả DefaultExtractors.');
+    } catch (e) {
+        console.error('Lỗi khi tải extractors:', e);
+    }
 
-    await player.extractors.loadMulti(filteredExtractors);
 
     // Xử lý các sự kiện của Discord Player
     fs.readdirSync(path.join(__dirname, 'events', 'discord-player')).forEach(file => {
@@ -62,7 +69,7 @@ const http = require('http');
     });
 
     player.events.on('debug', (queue, message) => {
-        // console.log(`[DEBUG] ${message}`); // Bỏ comment nếu muốn xem debug log chi tiết
+        console.log(`[DEBUG] ${message}`); // Bỏ comment để xem debug log chi tiết
     });
 
     // Tải các lệnh Slash Commands
@@ -117,6 +124,21 @@ const http = require('http');
     });
 
     client.login(config.BOT_TOKEN);
+
+    // Kiểm tra và kết nối Lavalink nodes sau khi bot đã sẵn sàng
+    client.once('ready', () => {
+        console.log('Client đã sẵn sàng. Đang kiểm tra Lavalink nodes...');
+        if (player.nodes.cache.size === 0) {
+            console.warn('Không có Lavalink node nào trong cache của player. Vui lòng kiểm tra cấu hình.');
+        } else {
+            console.log(`Tìm thấy ${player.nodes.cache.size} Lavalink nodes trong cache.`);
+            // discord-player sẽ tự động kết nối khi cần.
+            // Nếu bạn muốn kết nối ngay lập tức, bạn có thể gọi player.nodes.connect()
+            // nhưng nó không còn là một hàm trong Player.nodes nữa.
+            // Việc truyền nodes vào constructor là đủ.
+        }
+    });
+
 
     const PORT = process.env.PORT || 3000;
     const server = http.createServer((req, res) => {
