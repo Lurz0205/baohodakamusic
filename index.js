@@ -45,7 +45,7 @@ const http = require('http');
     // Đảm bảo extractors được tải đúng cách
     try {
         await player.extractors.loadMulti(DefaultExtractors);
-        // ĐÃ SỬA: Gỡ đăng ký SoundCloudExtractor một cách rõ ràng
+        // Gỡ đăng ký SoundCloudExtractor một cách rõ ràng
         player.extractors.unregister('SoundCloudExtractor');
         console.log('Đã gỡ đăng ký SoundCloudExtractor.');
         console.log('Đã tải và lọc DefaultExtractors.');
@@ -133,15 +133,16 @@ const http = require('http');
 
     client.login(config.BOT_TOKEN);
 
-    // Kiểm tra và kết nối Lavalink nodes sau khi bot đã sẵn sàng
+    // Kiểm tra Lavalink nodes sau khi bot đã sẵn sàng
     client.once('ready', () => {
         console.log('Client đã sẵn sàng. Đang kiểm tra Lavalink nodes...');
-        // player.nodes.manager.nodes sẽ chứa tất cả các node đã cấu hình
-        if (player.nodes.manager.nodes.size === 0) { // ĐÃ SỬA: Kiểm tra player.nodes.manager.nodes
-            console.warn('Không có Lavalink node nào được cấu hình trong player.nodes.manager.nodes. Vui lòng kiểm tra config.js.');
+        // ĐÃ SỬA: Kiểm tra trực tiếp player.nodes.cache
+        // player.nodes là GuildNodeManager, nó có thuộc tính .cache
+        if (player.nodes.cache.size === 0) {
+            console.warn('Không có Lavalink node nào đang kết nối trong cache của player. Vui lòng kiểm tra cấu hình hoặc trạng thái của các node.');
         } else {
-            console.log(`Tìm thấy ${player.nodes.manager.nodes.size} Lavalink nodes đã cấu hình. Kiểm tra log để xem trạng thái kết nối.`);
-            player.nodes.manager.nodes.forEach(node => { // ĐÃ SỬA: Lặp qua player.nodes.manager.nodes
+            console.log(`Tìm thấy ${player.nodes.cache.size} Lavalink nodes đang kết nối trong cache.`);
+            player.nodes.cache.forEach(node => {
                 console.log(`Node ${node.id}: Host: ${node.host}:${node.port}, Kết nối: ${node.connected ? '✅' : '❌'}`);
             });
         }
