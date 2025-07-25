@@ -2,11 +2,12 @@
 require('dotenv').config();
 const { Client, GatewayIntentBits, Collection } = require('discord.js');
 const { Player } = require('discord-player');
-const { DefaultExtractors } = require('@discord-player/extractor');
+// Thay vì DefaultExtractors, chúng ta sẽ import các extractors cụ thể
+const { YouTubeExtractor, SpotifyExtractor } = require('@discord-player/extractor'); // Thêm import này
 const fs = require('fs');
 const path = require('path');
 const config = require('./config');
-const http = require('http'); // Thêm import này
+const http = require('http');
 
 // Bọc toàn bộ logic khởi tạo bot trong một hàm async IIFE để sử dụng await
 (async () => {
@@ -31,8 +32,8 @@ const http = require('http'); // Thêm import này
         nodes: config.LAVALINK_NODES,
     });
 
-    // Đăng ký extractors
-    await player.extractors.loadMulti(DefaultExtractors);
+    // ĐÃ SỬA: Chỉ tải các extractors cho YouTube và Spotify
+    await player.extractors.loadMulti([YouTubeExtractor, SpotifyExtractor]);
 
     // Xử lý các sự kiện của Discord Player
     fs.readdirSync(path.join(__dirname, 'events', 'discord-player')).forEach(file => {
@@ -85,7 +86,7 @@ const http = require('http'); // Thêm import này
             await command.execute(interaction, player, client);
         } catch (error) {
             console.error(error);
-            if (interaction.replied || interaction.deferred) {
+            if (interaction.deferred || interaction.replied) {
                 await interaction.followUp({ content: 'Có lỗi xảy ra khi thực hiện lệnh này!', ephemeral: true });
             } else {
                 await interaction.reply({ content: 'Có lỗi xảy ra khi thực hiện lệnh này!', ephemeral: true });
@@ -95,8 +96,7 @@ const http = require('http'); // Thêm import này
 
     client.login(config.BOT_TOKEN);
 
-    // THÊM PHẦN NÀY ĐỂ MỞ CỔNG CHO RENDER VÀ UPTIMEROBOT
-    const PORT = process.env.PORT || 3000; // Render sẽ cung cấp biến PORT
+    const PORT = process.env.PORT || 3000;
     const server = http.createServer((req, res) => {
         res.statusCode = 200;
         res.setHeader('Content-Type', 'text/plain');
@@ -107,4 +107,4 @@ const http = require('http'); // Thêm import này
         console.log(`Server HTTP đang lắng nghe trên cổng ${PORT} để giữ bot online.`);
     });
 
-})(); // Kết thúc async IIFE
+})();
