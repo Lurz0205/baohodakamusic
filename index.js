@@ -75,7 +75,6 @@ const http = require('http');
     client.once('ready', () => {
         console.log('Client đã sẵn sàng. Đang khởi tạo Lavalink Manager...');
 
-        // ĐÃ SỬA: Khởi tạo LavalinkManager và gọi init() ngay lập tức
         lavalink = new LavalinkManager({
             nodes: config.LAVALINK_NODES,
             sendToShard: (guildId, payload) => {
@@ -89,11 +88,9 @@ const http = require('http');
             autoSkip: true,
         });
 
-        // ĐÃ SỬA: Gọi init() ngay sau khi tạo instance LavalinkManager
         lavalink.init({ id: client.user.id, username: client.user.username });
 
-        // Đăng ký các sự kiện của LavalinkManager (có thể giữ nguyên ở đây hoặc di chuyển lên trên)
-        // Việc đăng ký sự kiện sau init() vẫn hoạt động tốt.
+        // Đăng ký các sự kiện của LavalinkManager
         lavalink.on('nodeConnect', (node) => {
             console.log(`✅ Lavalink node ${node.id} (${node.host}:${node.port}) đã kết nối thành công.`);
         });
@@ -108,7 +105,6 @@ const http = require('http');
 
         lavalink.on('trackStart', (player, track) => {
             console.log(`🎶 Đang phát: ${track.info.title} trên guild ${player.guildId}`);
-            // Bạn có thể gửi tin nhắn thông báo bài hát đang phát tại đây
             if (player.textChannelId) {
                 client.channels.cache.get(player.textChannelId)?.send(`🎶 Đang phát: **${track.info.title}**`);
             }
@@ -119,7 +115,7 @@ const http = require('http');
             if (player.textChannelId) {
                 client.channels.cache.get(player.textChannelId)?.send('Hàng chờ đã kết thúc. Rời kênh thoại.');
             }
-            player.destroy(); // Hủy player và rời kênh thoại
+            player.destroy();
         });
 
         lavalink.on('playerCreate', (player) => {
@@ -130,12 +126,14 @@ const http = require('http');
             console.log(`Player bị hủy cho guild ${player.guildId}`);
         });
 
-        console.log(`Đã khởi tạo Lavalink Manager với ${lavalink.nodes.size} node.`);
-
-        // Log trạng thái kết nối của các node Lavalink
-        lavalink.nodes.forEach(node => {
-            console.log(`Node ${node.id}: Host: ${node.host}:${node.port}, Trạng thái: ${node.connected ? '✅ Đã kết nối' : '❌ Ngắt kết nối'}`);
-        });
+        // ĐÃ SỬA: Di chuyển việc log và lặp qua các node vào một setTimeout
+        // để đảm bảo lavalink.nodes đã được populate đầy đủ sau khi init().
+        setTimeout(() => {
+            console.log(`Đã khởi tạo Lavalink Manager với ${lavalink.nodes.size} node.`);
+            lavalink.nodes.forEach(node => {
+                console.log(`Node ${node.id}: Host: ${node.host}:${node.port}, Trạng thái: ${node.connected ? '✅ Đã kết nối' : '❌ Ngắt kết nối'}`);
+            });
+        }, 1000); // Đợi 1 giây để đảm bảo nodes được populate
     });
 
 
