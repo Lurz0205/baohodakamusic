@@ -1,6 +1,6 @@
 // commands/play.js
 const { SlashCommandBuilder } = require('discord.js');
-const { QueryType } = require('discord-player'); // QueryType vẫn tồn tại trong v6.x
+const { QueryType } = require('discord-player');
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -26,11 +26,16 @@ module.exports = {
         }
 
         try {
+            // ĐÃ SỬA: Cách tạo queue trong discord-player v6.x
+            // Sử dụng player.createQueue() hoặc player.queues.create()
             const queue = player.createQueue(interaction.guild, {
                 metadata: {
-                    channel: interaction.channel
+                    channel: interaction.channel // Gửi kênh văn bản để bot có thể gửi tin nhắn
                 },
-                // Các tùy chọn khác cho queue có thể khác trong v6.x
+                leaveOnEnd: true, // Tự động rời kênh khi hàng chờ kết thúc
+                leaveOnStop: true, // Tự động rời kênh khi dừng
+                leaveOnEmpty: true, // Tự động rời kênh khi không có ai trong kênh thoại
+                // Các tùy chọn khác có thể thêm vào đây
             });
 
             // Kết nối vào kênh thoại
@@ -47,13 +52,21 @@ module.exports = {
             // Tìm kiếm bài hát
             const searchResult = await player.search(query, {
                 requestedBy: interaction.user,
-                // Trong v6.x, QueryType có thể khác một chút hoặc không có QueryType.Auto
-                // Nếu là URL, hãy dùng QueryType.AUTO, nếu không thì YouTubeSearch
-                searchEngine: query.startsWith('http') ? QueryType.AUTO : QueryType.YOUTUBE_SEARCH
+                // Trong v6.x, QueryType.AUTO hoặc QueryType.YOUTUBE_SEARCH
+                searchEngine: QueryType.YOUTUBE_SEARCH // Ưu tiên YouTubeSearch
             });
 
             if (!searchResult || !searchResult.tracks.length) {
-                return interaction.editReply({ content: 'Không tìm thấy kết quả phù hợp. Vui lòng thử lại với từ khóa khác hoặc một liên kết trực tiếp.' });
+                // Nếu YouTube không tìm thấy, thử Spotify
+                const spotifySearchResult = await player.search(query, {
+                    requestedBy: interaction.user,
+                    searchEngine: QueryType.SPOTIFY_SEARCH
+                });
+                if (!spotifySearchResult || !spotifySearchResult.tracks.length) {
+                    return interaction.editReply({ content: 'Không tìm thấy kết quả phù hợp trên YouTube hoặc Spotify. Vui lòng thử lại với từ khóa khác hoặc một liên kết trực tiếp.' });
+                }
+                // Nếu tìm thấy trên Spotify, sử dụng kết quả Spotify
+                searchResult.tracks = spotifySearchResult.tracks;
             }
 
             // Thêm bài hát vào hàng chờ
